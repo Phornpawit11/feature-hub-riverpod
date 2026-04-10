@@ -12,45 +12,68 @@ class TodoUsecase extends _$TodoUsecase {
   @override
   FutureOr<List<Todo>> build() async {
     final todoList = await _todoRepository.getTodos();
-    // if (todoList.isEmpty) {
-    //   for (var index = 0; index < 3; index++) {
-    //     await _todoRepository.addTodo(
-    //       Todo(
-    //         id: DateTime.now().toString(),
-    //         title: 'ตำแหน่ง $index',
-    //         createdAt: DateTime.now(),
-    //         isCompleted: false,
-    //       ),
-    //     );
-    //   }
-    //   await Future.delayed(const Duration(seconds: 2));
-    //   return await _todoRepository.getTodos();
-    // }
+
     return todoList;
   }
 
   Future<void> toggleTodo(String todoId) async {
     await _todoRepository.toggleTodo(todoId);
-    state = AsyncData<List<Todo>>(await _todoRepository.getTodos());
+    await _refreshTodos();
   }
 
   Future<void> deleteTodo(String todoId) async {
     await _todoRepository.deleteTodo(todoId);
-    state = AsyncData<List<Todo>>(await _todoRepository.getTodos());
+    await _refreshTodos();
   }
 
-  Future<void> addTodo(String text) async {
-    final trimmedText = text.trim();
+  Future<void> addTodo({
+    required String title,
+    TodoPriority priority = TodoPriority.medium,
+    DateTime? dueDate,
+    String? colorValue,
+  }) async {
+    final trimmedText = title.trim();
     if (trimmedText.isEmpty) {
       return;
     }
+
     final newTodo = Todo(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       title: trimmedText,
       createdAt: DateTime.now(),
       isCompleted: false,
+      priority: priority,
+      dueDate: dueDate,
+      colorValue: colorValue,
     );
+
     await _todoRepository.addTodo(newTodo);
+    await _refreshTodos();
+  }
+
+  Future<void> editTodo(
+    String todoId, {
+    required String title,
+    required TodoPriority priority,
+    DateTime? dueDate,
+    String? colorValue,
+  }) async {
+    final trimmedText = title.trim();
+    if (trimmedText.isEmpty) {
+      return;
+    }
+
+    await _todoRepository.editTodo(
+      todoId,
+      title: trimmedText,
+      priority: priority,
+      dueDate: dueDate,
+      colorValue: colorValue,
+    );
+    await _refreshTodos();
+  }
+
+  Future<void> _refreshTodos() async {
     state = AsyncData<List<Todo>>(await _todoRepository.getTodos());
   }
 }

@@ -1,132 +1,270 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:todos_riverpod/src/core/widgets/app_text_field.dart';
+import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/edit_todo_dialog.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_calendar_section.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_composer_card.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_list_section.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_presentation_utils.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/todo.usecase.dart';
+
+enum _TodoViewMode { list, calendar }
 
 class TodoScreen extends HookConsumerWidget {
   const TodoScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final todoListAsync = ref.watch(todoUsecaseProvider);
     final textEditingController = useTextEditingController();
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final selectedPriority = useState(TodoPriority.medium);
+    final selectedDueDate = useState<DateTime?>(null);
+    final selectedColorValue = useState<String?>(null);
+    final isComposerExpanded = useState(false);
+    final viewMode = useState(_TodoViewMode.list);
+    final now = DateTime.now();
+    final focusedMonth = useState<DateTime>(DateTime(now.year, now.month));
+    final selectedCalendarDate = useState<DateTime>(dateOnly(now));
 
-    void submitTodo() {
+    void resetComposer() {
+      textEditingController.clear();
+      selectedPriority.value = TodoPriority.medium;
+      selectedDueDate.value = null;
+      selectedColorValue.value = null;
+    }
+
+    Future<void> submitTodo() async {
       final title = textEditingController.text.trim();
       if (title.isEmpty) return;
 
-      ref.read(todoUsecaseProvider.notifier).addTodo(title);
-      textEditingController.clear();
+      await ref
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(
+            title: title,
+            priority: selectedPriority.value,
+            dueDate: selectedDueDate.value,
+            colorValue: selectedColorValue.value,
+          );
+
+      resetComposer();
+      isComposerExpanded.value = false;
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task added'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    Future<void> showEditTodoDialog(Todo todo) async {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => EditTodoDialog(todo: todo),
+      );
+    }
+
+    void changeFocusedMonth(DateTime month) {
+      final normalizedMonth = DateTime(month.year, month.month);
+      focusedMonth.value = normalizedMonth;
+      selectedCalendarDate.value = normalizedMonth;
+    }
+
+    Future<void> deleteTodo(String todoId) async {
+      await ref.read(todoUsecaseProvider.notifier).deleteTodo(todoId);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task deleted'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Todos')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              spacing: 8.0,
-              children: [
-                Expanded(
-                  child: AppTextField(
-                    controller: textEditingController,
-                    hintText: 'Add a new task',
-                    prefixIcon: Icons.edit_outlined,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => submitTodo(),
-                  ),
-                ),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: submitTodo,
-                  child: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            todoListAsync.when(
-              data: (todos) {
-                if (todos.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
-                      child: Text('ยังไม่มี todo, ลองเพิ่มรายการแรกดู'),
-                    ),
+      body: Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 124),
+            children: [
+              TodoComposerCard(
+                title: 'New task',
+                isExpanded: isComposerExpanded.value,
+                controller: textEditingController,
+                priority: selectedPriority.value,
+                dueDate: selectedDueDate.value,
+                colorValue: selectedColorValue.value,
+                buttonLabel: 'Add task',
+                onExpand: () => isComposerExpanded.value = true,
+                onCollapse: () {
+                  resetComposer();
+                  isComposerExpanded.value = false;
+                },
+                onPriorityChanged: (priority) =>
+                    selectedPriority.value = priority,
+                onDueDateChanged: (dueDate) => selectedDueDate.value = dueDate,
+                onColorChanged: (colorValue) =>
+                    selectedColorValue.value = colorValue,
+                onSubmit: submitTodo,
+              ),
+              const SizedBox(height: 20),
+              todoListAsync.when(
+                data: (todos) {
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: viewMode.value == _TodoViewMode.list
+                        ? TodoListSection(
+                            key: const ValueKey('list-view'),
+                            todos: todos,
+                            onEdit: showEditTodoDialog,
+                            onToggle: (todoId) {
+                              ref
+                                  .read(todoUsecaseProvider.notifier)
+                                  .toggleTodo(todoId);
+                            },
+                            onDelete: deleteTodo,
+                          )
+                        : TodoCalendarSection(
+                            key: const ValueKey('calendar-view'),
+                            todos: todos,
+                            focusedMonth: focusedMonth.value,
+                            selectedDate: selectedCalendarDate.value,
+                            onMonthChanged: changeFocusedMonth,
+                            onDateSelected: (date) =>
+                                selectedCalendarDate.value = date,
+                            onEdit: showEditTodoDialog,
+                            onToggle: (todoId) {
+                              ref
+                                  .read(todoUsecaseProvider.notifier)
+                                  .toggleTodo(todoId);
+                            },
+                            onDelete: deleteTodo,
+                          ),
                   );
-                }
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (err, stack) => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: Text('Something went wrong')),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 8,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              offset: isKeyboardVisible ? const Offset(0, 1.2) : Offset.zero,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 160),
+                opacity: isKeyboardVisible ? 0 : 1,
+                child: IgnorePointer(
+                  ignoring: isKeyboardVisible,
+                  child: SafeArea(
+                    top: false,
+                    child: _FloatingViewModeSwitcher(
+                      selectedViewMode: viewMode.value,
+                      onChanged: (mode) => viewMode.value = mode,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                return ListView.builder(
-                  itemCount: todos.length,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemBuilder: (BuildContext context, int index) {
-                    final todo = todos[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Material(
-                        color: cs.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(16),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          title: Text(
-                            todo.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: todo.isCompleted
-                                  ? cs.onSurfaceVariant
-                                  : cs.onSurface,
-                              decoration: todo.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                          leading: Checkbox(
-                            value: todo.isCompleted,
-                            onChanged: (_) {
-                              ref
-                                  .read(todoUsecaseProvider.notifier)
-                                  .toggleTodo(todo.id);
-                            },
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete_outline, color: cs.error),
-                            tooltip: 'Delete todo',
-                            onPressed: () {
-                              ref
-                                  .read(todoUsecaseProvider.notifier)
-                                  .deleteTodo(todo.id);
-                            },
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) =>
-                  Center(child: Text('เกิดข้อผิดพลาด: $err')),
+class _FloatingViewModeSwitcher extends StatelessWidget {
+  const _FloatingViewModeSwitcher({
+    required this.selectedViewMode,
+    required this.onChanged,
+  });
+
+  final _TodoViewMode selectedViewMode;
+  final ValueChanged<_TodoViewMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 340),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: cs.surface.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.72)),
+          boxShadow: [
+            BoxShadow(
+              color: cs.shadow.withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: SegmentedButton<_TodoViewMode>(
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return cs.primary.withValues(alpha: 0.14);
+              }
+              return Colors.transparent;
+            }),
+            foregroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return cs.primary;
+              }
+              return cs.onSurfaceVariant;
+            }),
+            textStyle: WidgetStatePropertyAll(
+              Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            side: const WidgetStatePropertyAll(BorderSide.none),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          segments: const [
+            ButtonSegment<_TodoViewMode>(
+              value: _TodoViewMode.list,
+              icon: Icon(Icons.view_list_rounded),
+              label: Text('List'),
+            ),
+            ButtonSegment<_TodoViewMode>(
+              value: _TodoViewMode.calendar,
+              icon: Icon(Icons.calendar_month_rounded),
+              label: Text('Calendar'),
+            ),
+          ],
+          selected: <_TodoViewMode>{selectedViewMode},
+          onSelectionChanged: (selection) => onChanged(selection.first),
         ),
       ),
     );

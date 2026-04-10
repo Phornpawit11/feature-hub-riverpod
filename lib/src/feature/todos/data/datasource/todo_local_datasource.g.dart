@@ -34,7 +34,7 @@ final class TodoLocalDatasourceProvider
 }
 
 String _$todoLocalDatasourceHash() =>
-    r'e71e2b32d50437755a399bf7159afc5ddbea5a9f';
+    r'75311959685ef5f4f4d9642332c4f5827cabf826';
 
 abstract class _$TodoLocalDatasource extends $AsyncNotifier<void> {
   FutureOr<void> build();

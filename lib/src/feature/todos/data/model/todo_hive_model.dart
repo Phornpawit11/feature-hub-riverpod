@@ -10,6 +10,9 @@ class TodoHiveModel extends HiveObject {
     required this.title,
     required this.createdAt,
     required this.isCompleted,
+    this.priorityKey = 'medium',
+    this.dueDate,
+    this.colorValue,
   });
 
   factory TodoHiveModel.fromDomain(Todo todo) {
@@ -18,6 +21,9 @@ class TodoHiveModel extends HiveObject {
       title: todo.title,
       createdAt: todo.createdAt,
       isCompleted: todo.isCompleted,
+      priorityKey: todo.priority.name,
+      dueDate: todo.dueDate,
+      colorValue: todo.colorValue,
     );
   }
 
@@ -33,12 +39,27 @@ class TodoHiveModel extends HiveObject {
   @HiveField(3)
   final bool isCompleted;
 
+  @HiveField(4, defaultValue: 'medium')
+  final String priorityKey;
+
+  @HiveField(5)
+  final DateTime? dueDate;
+
+  @HiveField(6)
+  final String? colorValue;
+
   Todo toDomain() {
     return Todo(
       id: id,
       title: title,
       createdAt: createdAt,
       isCompleted: isCompleted,
+      priority: TodoPriority.values.firstWhere(
+        (priority) => priority.name == priorityKey,
+        orElse: () => TodoPriority.medium,
+      ),
+      dueDate: dueDate,
+      colorValue: colorValue,
     );
   }
 }

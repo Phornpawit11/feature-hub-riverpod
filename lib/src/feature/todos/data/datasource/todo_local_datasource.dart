@@ -22,6 +22,10 @@ class TodoLocalDatasource extends _$TodoLocalDatasource {
     await Hive.box<TodoHiveModel>(HiveBoxes.todos).put(todo.id, todo);
   }
 
+  Future<TodoHiveModel?> getTodoById(String todoId) async {
+    return Hive.box<TodoHiveModel>(HiveBoxes.todos).get(todoId);
+  }
+
   Future<void> deleteTodo(String todoId) async {
     await Hive.box<TodoHiveModel>(HiveBoxes.todos).delete(todoId);
   }

@@ -6,6 +6,8 @@ class AppTextField extends StatelessWidget {
     this.controller,
     this.hintText,
     this.prefixIcon,
+    this.errorText,
+    this.onChanged,
     this.onSubmitted,
     this.textInputAction,
     this.autofocus = false,
@@ -14,6 +16,8 @@ class AppTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? hintText;
   final IconData? prefixIcon;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextInputAction? textInputAction;
   final bool autofocus;
@@ -26,11 +30,13 @@ class AppTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       autofocus: autofocus,
+      onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: textInputAction,
       style: theme.textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: hintText,
+        errorText: errorText,
         hintStyle: theme.textTheme.bodyLarge?.copyWith(
           color: cs.onSurfaceVariant,
         ),

@@ -18,6 +18,9 @@ void main() {
             title: 'Write tests',
             createdAt: DateTime(2026, 1, 1),
             isCompleted: false,
+            priority: TodoPriority.low,
+            dueDate: DateTime(2026, 1, 3),
+            colorValue: 'FF5B8DEF',
           ),
         ],
       );
@@ -42,12 +45,22 @@ void main() {
     test('adds a todo and refreshes state', () async {
       await container.read(todoUsecaseProvider.future);
 
-      await container.read(todoUsecaseProvider.notifier).addTodo('Review PR');
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(
+            title: 'Review PR',
+            priority: TodoPriority.high,
+            dueDate: DateTime(2026, 1, 4),
+            colorValue: 'FFEF5350',
+          );
       final todos = await container.read(todoUsecaseProvider.future);
 
       expect(todos, hasLength(2));
       expect(todos.last.title, 'Review PR');
       expect(todos.last.isCompleted, isFalse);
+      expect(todos.last.priority, TodoPriority.high);
+      expect(todos.last.dueDate, DateTime(2026, 1, 4));
+      expect(todos.last.colorValue, 'FFEF5350');
       expect(fakeRepository.addedTodos, hasLength(1));
       expect(fakeRepository.addedTodos.single.title, 'Review PR');
     });
@@ -55,7 +68,9 @@ void main() {
     test('trims input before adding a todo', () async {
       await container.read(todoUsecaseProvider.future);
 
-      await container.read(todoUsecaseProvider.notifier).addTodo('  Trim me  ');
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(title: '  Trim me  ');
       final todos = await container.read(todoUsecaseProvider.future);
 
       expect(todos.last.title, 'Trim me');
@@ -65,7 +80,7 @@ void main() {
     test('does not add an empty todo after trimming', () async {
       await container.read(todoUsecaseProvider.future);
 
-      await container.read(todoUsecaseProvider.notifier).addTodo('   ');
+      await container.read(todoUsecaseProvider.notifier).addTodo(title: '   ');
       final todos = await container.read(todoUsecaseProvider.future);
 
       expect(todos, hasLength(1));
@@ -83,6 +98,72 @@ void main() {
       expect(fakeRepository.toggledTodoIds, ['1']);
     });
 
+    test('edits a todo and refreshes state', () async {
+      await container.read(todoUsecaseProvider.future);
+
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .editTodo(
+            '1',
+            title: 'New title',
+            priority: TodoPriority.medium,
+            dueDate: DateTime(2026, 1, 6),
+            colorValue: 'FF26A69A',
+          );
+      final todos = await container.read(todoUsecaseProvider.future);
+
+      expect(todos.single.title, 'New title');
+      expect(todos.single.priority, TodoPriority.medium);
+      expect(todos.single.dueDate, DateTime(2026, 1, 6));
+      expect(todos.single.colorValue, 'FF26A69A');
+      expect(fakeRepository.editedTodos, [
+        (
+          '1',
+          'New title',
+          TodoPriority.medium,
+          DateTime(2026, 1, 6),
+          'FF26A69A',
+        ),
+      ]);
+    });
+
+    test('trims input before editing a todo', () async {
+      await container.read(todoUsecaseProvider.future);
+
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .editTodo(
+            '1',
+            title: '  Updated title  ',
+            priority: TodoPriority.high,
+            dueDate: DateTime(2026, 1, 7),
+            colorValue: 'FFFFB020',
+          );
+      final todos = await container.read(todoUsecaseProvider.future);
+
+      expect(todos.single.title, 'Updated title');
+      expect(fakeRepository.editedTodos.single.$2, 'Updated title');
+    });
+
+    test('does not edit a todo with empty text after trimming', () async {
+      await container.read(todoUsecaseProvider.future);
+
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .editTodo(
+            '1',
+            title: '   ',
+            priority: TodoPriority.high,
+            dueDate: DateTime(2026, 1, 8),
+            colorValue: 'FFAB47BC',
+          );
+      final todos = await container.read(todoUsecaseProvider.future);
+
+      expect(todos.single.title, 'Write tests');
+      expect(fakeRepository.editedTodos, isEmpty);
+      expect(fakeRepository.getTodosCallCount, 1);
+    });
+
     test('deletes a todo and refreshes state', () async {
       await container.read(todoUsecaseProvider.future);
 
@@ -92,6 +173,18 @@ void main() {
       expect(todos, isEmpty);
       expect(fakeRepository.deletedTodoIds, ['1']);
     });
+
+    test('toggle keeps metadata intact', () async {
+      await container.read(todoUsecaseProvider.future);
+
+      await container.read(todoUsecaseProvider.notifier).toggleTodo('1');
+      final todos = await container.read(todoUsecaseProvider.future);
+
+      expect(todos.single.isCompleted, isTrue);
+      expect(todos.single.priority, TodoPriority.low);
+      expect(todos.single.dueDate, DateTime(2026, 1, 3));
+      expect(todos.single.colorValue, 'FF5B8DEF');
+    });
   });
 }
 
@@ -100,6 +193,8 @@ class _FakeTodoRepository implements TodoRepository {
 
   final List<Todo> _todos;
   final List<Todo> addedTodos = [];
+  final List<(String, String, TodoPriority, DateTime?, String?)> editedTodos =
+      [];
   final List<String> toggledTodoIds = [];
   final List<String> deletedTodoIds = [];
   int getTodosCallCount = 0;
@@ -120,6 +215,26 @@ class _FakeTodoRepository implements TodoRepository {
   Future<List<Todo>> getTodos() async {
     getTodosCallCount++;
     return List.unmodifiable(_todos);
+  }
+
+  @override
+  Future<void> editTodo(
+    String todoId, {
+    required String title,
+    required TodoPriority priority,
+    DateTime? dueDate,
+    String? colorValue,
+  }) async {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+
+    _todos[index] = _todos[index].copyWith(
+      title: title,
+      priority: priority,
+      dueDate: dueDate,
+      colorValue: colorValue,
+    );
+    editedTodos.add((todoId, title, priority, dueDate, colorValue));
   }
 
   @override
