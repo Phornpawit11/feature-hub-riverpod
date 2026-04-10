@@ -71,6 +71,8 @@ class _PrioritySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -89,6 +91,11 @@ class _PrioritySelector extends StatelessWidget {
                 ),
               )
               .toList(),
+          style: ButtonStyle(
+            side: WidgetStatePropertyAll(
+              BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+            ),
+          ),
           selected: <TodoPriority>{selected},
           onSelectionChanged: (selection) => onSelected(selection.first),
         ),
@@ -114,6 +121,16 @@ class _DueDateField extends StatelessWidget {
         initialDate: value ?? now,
         firstDate: DateTime(now.year - 3),
         lastDate: DateTime(now.year + 5, 12, 31),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              datePickerTheme: DatePickerThemeData(
+                headerHeadlineStyle: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+            child: child!,
+          );
+        },
       );
 
       if (pickedDate != null) {
@@ -131,6 +148,11 @@ class _DueDateField extends StatelessWidget {
           runSpacing: 8,
           children: [
             OutlinedButton.icon(
+              style: ButtonStyle(
+                side: WidgetStatePropertyAll(
+                  BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                ),
+              ),
               onPressed: pickDueDate,
               icon: const Icon(Icons.event_rounded),
               label: Text(
@@ -188,7 +210,9 @@ class _ColorSelector extends StatelessWidget {
                   color: color,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected ? cs.onSurface : cs.outlineVariant,
+                    color: isSelected
+                        ? cs.onSurface.withValues(alpha: 0.3)
+                        : cs.outlineVariant,
                     width: isSelected ? 3 : 1.2,
                   ),
                 ),

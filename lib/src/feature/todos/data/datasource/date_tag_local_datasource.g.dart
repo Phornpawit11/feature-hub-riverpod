@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'todo_repository_impl.dart';
+part of 'date_tag_local_datasource.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,34 +9,34 @@ part of 'todo_repository_impl.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(TodoRepositoryImpl)
-const todoRepositoryImplProvider = TodoRepositoryImplProvider._();
+@ProviderFor(DateTagLocalDatasource)
+const dateTagLocalDatasourceProvider = DateTagLocalDatasourceProvider._();
 
-final class TodoRepositoryImplProvider
-    extends $AsyncNotifierProvider<TodoRepositoryImpl, void> {
-  const TodoRepositoryImplProvider._()
+final class DateTagLocalDatasourceProvider
+    extends $AsyncNotifierProvider<DateTagLocalDatasource, void> {
+  const DateTagLocalDatasourceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'todoRepositoryImplProvider',
+        name: r'dateTagLocalDatasourceProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$todoRepositoryImplHash();
+  String debugGetCreateSourceHash() => _$dateTagLocalDatasourceHash();
 
   @$internal
   @override
-  TodoRepositoryImpl create() => TodoRepositoryImpl();
+  DateTagLocalDatasource create() => DateTagLocalDatasource();
 }
 
-String _$todoRepositoryImplHash() =>
-    r'723eb9f08d6176cb04978f1609b9725b03cc4fdd';
+String _$dateTagLocalDatasourceHash() =>
+    r'9c6e5fbf39866fad456bffcbf56db60a3689b9cb';
 
-abstract class _$TodoRepositoryImpl extends $AsyncNotifier<void> {
+abstract class _$DateTagLocalDatasource extends $AsyncNotifier<void> {
   FutureOr<void> build();
   @$mustCallSuper
   @override

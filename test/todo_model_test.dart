@@ -11,7 +11,7 @@ void main() {
         'isCompleted': false,
       });
 
-      expect(todo.priority, TodoPriority.medium);
+      expect(todo.priority, TodoPriority.low);
       expect(todo.dueDate, isNull);
       expect(todo.colorValue, isNull);
     });

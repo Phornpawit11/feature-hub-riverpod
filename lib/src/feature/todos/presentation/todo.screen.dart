@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
+import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/add_date_tag_sheet.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/edit_todo_dialog.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_calendar_section.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_composer_card.dart';
@@ -9,7 +12,7 @@ import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_list_
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_presentation_utils.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/todo.usecase.dart';
 
-enum _TodoViewMode { list, calendar }
+enum _TodoViewMode { calendar, list }
 
 class TodoScreen extends HookConsumerWidget {
   const TodoScreen({super.key});
@@ -18,12 +21,13 @@ class TodoScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final todoListAsync = ref.watch(todoUsecaseProvider);
+    final dateTagAsync = ref.watch(dateTagUsecaseProvider);
     final textEditingController = useTextEditingController();
     final selectedPriority = useState(TodoPriority.medium);
     final selectedDueDate = useState<DateTime?>(null);
     final selectedColorValue = useState<String?>(null);
     final isComposerExpanded = useState(false);
-    final viewMode = useState(_TodoViewMode.list);
+    final viewMode = useState(_TodoViewMode.calendar);
     final now = DateTime.now();
     final focusedMonth = useState<DateTime>(DateTime(now.year, now.month));
     final selectedCalendarDate = useState<DateTime>(dateOnly(now));
@@ -89,6 +93,56 @@ class TodoScreen extends HookConsumerWidget {
       }
     }
 
+    Future<void> showDateTagSheet(DateTagState tagState) async {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        builder: (sheetContext) {
+          return AddDateTagSheet(
+            tags: tagState.tags,
+            onSelectTag: (tag) async {
+              await ref
+                  .read(dateTagUsecaseProvider.notifier)
+                  .assignTagToDate(selectedCalendarDate.value, tag.id);
+
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop();
+              }
+            },
+            onCreateTag: (name, colorValue) async {
+              await ref
+                  .read(dateTagUsecaseProvider.notifier)
+                  .createTagAndAssignToDate(
+                    date: selectedCalendarDate.value,
+                    name: name,
+                    colorValue: colorValue,
+                  );
+
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop();
+              }
+            },
+            onUpdateTag: (tag) {
+              return ref.read(dateTagUsecaseProvider.notifier).updateTag(tag);
+            },
+            onDeleteTag: (tag) {
+              return ref
+                  .read(dateTagUsecaseProvider.notifier)
+                  .deleteTag(tag.id);
+            },
+          );
+        },
+      );
+    }
+
+    Future<void> removeDateTag() async {
+      await ref
+          .read(dateTagUsecaseProvider.notifier)
+          .removeTagFromDate(selectedCalendarDate.value);
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Todos')),
       body: Stack(
@@ -118,39 +172,53 @@ class TodoScreen extends HookConsumerWidget {
               ),
               const SizedBox(height: 20),
               todoListAsync.when(
-                data: (todos) {
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: viewMode.value == _TodoViewMode.list
-                        ? TodoListSection(
-                            key: const ValueKey('list-view'),
-                            todos: todos,
-                            onEdit: showEditTodoDialog,
-                            onToggle: (todoId) {
-                              ref
-                                  .read(todoUsecaseProvider.notifier)
-                                  .toggleTodo(todoId);
-                            },
-                            onDelete: deleteTodo,
-                          )
-                        : TodoCalendarSection(
-                            key: const ValueKey('calendar-view'),
-                            todos: todos,
-                            focusedMonth: focusedMonth.value,
-                            selectedDate: selectedCalendarDate.value,
-                            onMonthChanged: changeFocusedMonth,
-                            onDateSelected: (date) =>
-                                selectedCalendarDate.value = date,
-                            onEdit: showEditTodoDialog,
-                            onToggle: (todoId) {
-                              ref
-                                  .read(todoUsecaseProvider.notifier)
-                                  .toggleTodo(todoId);
-                            },
-                            onDelete: deleteTodo,
-                          ),
-                  );
-                },
+                data: (todos) => dateTagAsync.when(
+                  data: (tagState) {
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: viewMode.value == _TodoViewMode.list
+                          ? TodoListSection(
+                              key: const ValueKey('list-view'),
+                              todos: todos,
+                              onEdit: showEditTodoDialog,
+                              onToggle: (todoId) {
+                                ref
+                                    .read(todoUsecaseProvider.notifier)
+                                    .toggleTodo(todoId);
+                              },
+                              onDelete: deleteTodo,
+                            )
+                          : TodoCalendarSection(
+                              key: const ValueKey('calendar-view'),
+                              todos: todos,
+                              focusedMonth: focusedMonth.value,
+                              selectedDate: selectedCalendarDate.value,
+                              dateTagsByDay: tagState.assignedTagByDate,
+                              onMonthChanged: changeFocusedMonth,
+                              onDateSelected: (date) =>
+                                  selectedCalendarDate.value = date,
+                              onAddTag: () => showDateTagSheet(tagState),
+                              onChangeTag: () => showDateTagSheet(tagState),
+                              onRemoveTag: removeDateTag,
+                              onEdit: showEditTodoDialog,
+                              onToggle: (todoId) {
+                                ref
+                                    .read(todoUsecaseProvider.notifier)
+                                    .toggleTodo(todoId);
+                              },
+                              onDelete: deleteTodo,
+                            ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (err, stack) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(child: Text('Something went wrong')),
+                  ),
+                ),
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
@@ -253,14 +321,14 @@ class _FloatingViewModeSwitcher extends StatelessWidget {
           ),
           segments: const [
             ButtonSegment<_TodoViewMode>(
-              value: _TodoViewMode.list,
-              icon: Icon(Icons.view_list_rounded),
-              label: Text('List'),
-            ),
-            ButtonSegment<_TodoViewMode>(
               value: _TodoViewMode.calendar,
               icon: Icon(Icons.calendar_month_rounded),
               label: Text('Calendar'),
+            ),
+            ButtonSegment<_TodoViewMode>(
+              value: _TodoViewMode.list,
+              icon: Icon(Icons.view_list_rounded),
+              label: Text('List'),
             ),
           ],
           selected: <_TodoViewMode>{selectedViewMode},

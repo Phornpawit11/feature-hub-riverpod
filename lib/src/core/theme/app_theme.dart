@@ -31,12 +31,13 @@ abstract final class AppTheme {
   /// สำหรับใช้งานในสภาวะที่มีแสงสว่างปกติ
   ///
   /// **รายละเอียดที่สำคัญ (The "Why"):**
-  /// - `scheme`: ใช้ตระกูลสี [FlexScheme.flutterDash] เป็นแกนหลัก เพื่อให้เข้ากับแบรนด์ของโปรเจกต์
+  /// - `scheme`: ใช้ตระกูลสี [FlexScheme.sakura] เป็นแกนหลัก เพื่อให้เข้ากับแบรนด์ของโปรเจกต์
   /// - `defaultRadius`: ตั้งค่าเป็น `16.0` เพื่อให้ปุ่ม กรอบข้อความ และการ์ดต่างๆ มีขอบโค้งมน ดูทันสมัย เป็นมิตรกับผู้ใช้ (Modern UI/UX)
   /// - `blendOnColors`: เปิดใช้งานเพื่อให้สีพื้นฐาน (เช่น Surface) ผสมกับสีหลักเล็กน้อย สร้างความกลมกลืนในหน้าจอ
   /// - `keyColors`: ใช้ `keepPrimary` และ `keepPrimaryContainer` เพื่อป้องกันไม่ให้กลไกการคำนวณสีอัตโนมัติไปปรับเปลี่ยนรหัสสีหลักที่เราต้องการล็อกไว้ตายตัว
   static ThemeData light = FlexThemeData.light(
-    scheme: FlexScheme.flutterDash,
+    blendLevel: 5,
+    scheme: FlexScheme.sakura,
     textTheme: myGlobalTextTheme,
     fontFamily: 'Kanit',
     scaffoldBackground: const Color(0xFFF6F8FB),
@@ -68,8 +69,8 @@ abstract final class AppTheme {
   /// - `defaultRadius`: ตั้งค่าเป็น `20.0` (มีความโค้งมนกว้างกว่าแสงสว่างเล็กน้อย) เพื่อปรับสมดุลมวลสีเข้มเมื่อสะท้อนกับการ์ดหรือหน้าต่างแจ้งเตือน
   /// - ใช้ [myGlobalTextTheme] เช่นเดียวกับโหมดสว่าง แต่ค่าความสว่างของตัวอักษรจะถูกสลับให้เกิดเป็นสีสว่างอัตโนมัติตามกลไกของแพ็กเกจ FlexColorScheme
   static ThemeData dark = FlexThemeData.dark(
-    scheme: FlexScheme.flutterDash,
-    blendLevel: 20,
+    scheme: FlexScheme.sakura,
+    blendLevel: 5,
     fontFamily: 'Kanit',
     textTheme: myGlobalTextTheme,
     subThemesData: const FlexSubThemesData(

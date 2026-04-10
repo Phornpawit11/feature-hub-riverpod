@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:todos_riverpod/src/core/utils/date_utils.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 
 const List<String> todoWeekdayLabels = <String>[
@@ -21,7 +22,7 @@ const List<String?> todoColors = <String?>[
   'FF8D6E63',
 ];
 
-DateTime dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+DateTime dateOnly(DateTime date) => normalizeDate(date);
 
 List<DateTime?> buildMonthDays(DateTime focusedMonth) {
   final firstDay = DateTime(focusedMonth.year, focusedMonth.month);

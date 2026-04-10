@@ -215,7 +215,7 @@ return $default(_that.id,_that.title,_that.createdAt,_that.isCompleted,_that.pri
 @JsonSerializable()
 
 class _Todo implements Todo {
-   _Todo({required this.id, required this.title, required this.createdAt, required this.isCompleted, this.priority = TodoPriority.medium, this.dueDate, this.colorValue});
+   _Todo({required this.id, required this.title, required this.createdAt, required this.isCompleted, this.priority = TodoPriority.low, this.dueDate, this.colorValue});
   factory _Todo.fromJson(Map<String, dynamic> json) => _$TodoFromJson(json);
 
 @override final  String id;

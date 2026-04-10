@@ -13,7 +13,7 @@ _Todo _$TodoFromJson(Map<String, dynamic> json) => _Todo(
   isCompleted: json['isCompleted'] as bool,
   priority:
       $enumDecodeNullable(_$TodoPriorityEnumMap, json['priority']) ??
-      TodoPriority.medium,
+      TodoPriority.low,
   dueDate: json['dueDate'] == null
       ? null
       : DateTime.parse(json['dueDate'] as String),

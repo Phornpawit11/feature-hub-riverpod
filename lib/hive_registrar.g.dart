@@ -3,16 +3,22 @@
 // Check in to version control
 
 import 'package:hive_ce/hive.dart';
+import 'package:todos_riverpod/src/feature/todos/data/model/date_tag_hive_model.dart';
+import 'package:todos_riverpod/src/feature/todos/data/model/tagged_date_hive_model.dart';
 import 'package:todos_riverpod/src/feature/todos/data/model/todo_hive_model.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(DateTagHiveModelAdapter());
+    registerAdapter(TaggedDateHiveModelAdapter());
     registerAdapter(TodoHiveModelAdapter());
   }
 }
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(DateTagHiveModelAdapter());
+    registerAdapter(TaggedDateHiveModelAdapter());
     registerAdapter(TodoHiveModelAdapter());
   }
 }
