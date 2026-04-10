@@ -84,8 +84,9 @@ class _PrioritySelector extends StatelessWidget {
                 (priority) => ButtonSegment<TodoPriority>(
                   value: priority,
                   icon: Icon(
-                    Icons.flag_rounded,
+                    Icons.circle_rounded,
                     color: priorityColor(priority),
+                    size: 16,
                   ),
                   label: Text(priority.label),
                 ),
