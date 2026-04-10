@@ -48,6 +48,11 @@ class CalendarDayTagSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
+              style: ButtonStyle(
+                side: WidgetStatePropertyAll(
+                  BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                ),
+              ),
               onPressed: onAddTag,
               icon: const Icon(Icons.label_outline_rounded),
               label: const Text('Add tag'),

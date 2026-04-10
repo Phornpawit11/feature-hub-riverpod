@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:todos_riverpod/src/core/widgets/app_drawer.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
@@ -16,6 +17,8 @@ enum _TodoViewMode { calendar, list }
 
 class TodoScreen extends HookConsumerWidget {
   const TodoScreen({super.key});
+
+  static const double _screenSwipeVelocityThreshold = 280;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -77,6 +80,14 @@ class TodoScreen extends HookConsumerWidget {
       final normalizedMonth = DateTime(month.year, month.month);
       focusedMonth.value = normalizedMonth;
       selectedCalendarDate.value = normalizedMonth;
+    }
+
+    void switchToListMode() {
+      viewMode.value = _TodoViewMode.list;
+    }
+
+    void switchToCalendarMode() {
+      viewMode.value = _TodoViewMode.calendar;
     }
 
     Future<void> deleteTodo(String todoId) async {
@@ -145,71 +156,97 @@ class TodoScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Todos')),
+      endDrawer: const AppDrawer(),
+
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 124),
-            children: [
-              TodoComposerCard(
-                title: 'New task',
-                isExpanded: isComposerExpanded.value,
-                controller: textEditingController,
-                priority: selectedPriority.value,
-                dueDate: selectedDueDate.value,
-                colorValue: selectedColorValue.value,
-                buttonLabel: 'Add task',
-                onExpand: () => isComposerExpanded.value = true,
-                onCollapse: () {
-                  resetComposer();
-                  isComposerExpanded.value = false;
-                },
-                onPriorityChanged: (priority) =>
-                    selectedPriority.value = priority,
-                onDueDateChanged: (dueDate) => selectedDueDate.value = dueDate,
-                onColorChanged: (colorValue) =>
-                    selectedColorValue.value = colorValue,
-                onSubmit: submitTodo,
-              ),
-              const SizedBox(height: 20),
-              todoListAsync.when(
-                data: (todos) => dateTagAsync.when(
-                  data: (tagState) {
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      child: viewMode.value == _TodoViewMode.list
-                          ? TodoListSection(
-                              key: const ValueKey('list-view'),
-                              todos: todos,
-                              onEdit: showEditTodoDialog,
-                              onToggle: (todoId) {
-                                ref
-                                    .read(todoUsecaseProvider.notifier)
-                                    .toggleTodo(todoId);
-                              },
-                              onDelete: deleteTodo,
-                            )
-                          : TodoCalendarSection(
-                              key: const ValueKey('calendar-view'),
-                              todos: todos,
-                              focusedMonth: focusedMonth.value,
-                              selectedDate: selectedCalendarDate.value,
-                              dateTagsByDay: tagState.assignedTagByDate,
-                              onMonthChanged: changeFocusedMonth,
-                              onDateSelected: (date) =>
-                                  selectedCalendarDate.value = date,
-                              onAddTag: () => showDateTagSheet(tagState),
-                              onChangeTag: () => showDateTagSheet(tagState),
-                              onRemoveTag: removeDateTag,
-                              onEdit: showEditTodoDialog,
-                              onToggle: (todoId) {
-                                ref
-                                    .read(todoUsecaseProvider.notifier)
-                                    .toggleTodo(todoId);
-                              },
-                              onDelete: deleteTodo,
-                            ),
-                    );
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              final velocity = (details.primaryVelocity ?? 0).abs();
+              if (velocity < _screenSwipeVelocityThreshold) {
+                return;
+              }
+
+              if (viewMode.value == _TodoViewMode.calendar) {
+                switchToListMode();
+              } else {
+                switchToCalendarMode();
+              }
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 124),
+              children: [
+                TodoComposerCard(
+                  title: 'New task',
+                  isExpanded: isComposerExpanded.value,
+                  controller: textEditingController,
+                  priority: selectedPriority.value,
+                  dueDate: selectedDueDate.value,
+                  colorValue: selectedColorValue.value,
+                  buttonLabel: 'Add task',
+                  onExpand: () => isComposerExpanded.value = true,
+                  onCollapse: () {
+                    resetComposer();
+                    isComposerExpanded.value = false;
                   },
+                  onPriorityChanged: (priority) =>
+                      selectedPriority.value = priority,
+                  onDueDateChanged: (dueDate) =>
+                      selectedDueDate.value = dueDate,
+                  onColorChanged: (colorValue) =>
+                      selectedColorValue.value = colorValue,
+                  onSubmit: submitTodo,
+                ),
+                const SizedBox(height: 20),
+                todoListAsync.when(
+                  data: (todos) => dateTagAsync.when(
+                    data: (tagState) {
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: viewMode.value == _TodoViewMode.list
+                            ? TodoListSection(
+                                key: const ValueKey('list-view'),
+                                todos: todos,
+                                onEdit: showEditTodoDialog,
+                                onToggle: (todoId) {
+                                  ref
+                                      .read(todoUsecaseProvider.notifier)
+                                      .toggleTodo(todoId);
+                                },
+                                onDelete: deleteTodo,
+                              )
+                            : TodoCalendarSection(
+                                key: const ValueKey('calendar-view'),
+                                todos: todos,
+                                focusedMonth: focusedMonth.value,
+                                selectedDate: selectedCalendarDate.value,
+                                dateTagsByDay: tagState.assignedTagByDate,
+                                onMonthChanged: changeFocusedMonth,
+                                onDateSelected: (date) =>
+                                    selectedCalendarDate.value = date,
+                                onAddTag: () => showDateTagSheet(tagState),
+                                onChangeTag: () => showDateTagSheet(tagState),
+                                onRemoveTag: removeDateTag,
+                                onEdit: showEditTodoDialog,
+                                onToggle: (todoId) {
+                                  ref
+                                      .read(todoUsecaseProvider.notifier)
+                                      .toggleTodo(todoId);
+                                },
+                                onDelete: deleteTodo,
+                              ),
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (err, stack) => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: Text('Something went wrong')),
+                    ),
+                  ),
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(child: CircularProgressIndicator()),
@@ -219,16 +256,8 @@ class TodoScreen extends HookConsumerWidget {
                     child: Center(child: Text('Something went wrong')),
                   ),
                 ),
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (err, stack) => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('Something went wrong')),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           Positioned(
             left: 16,

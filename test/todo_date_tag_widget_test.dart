@@ -325,6 +325,178 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('swipe left on screen outside grid switches to list mode', (
+      WidgetTester tester,
+    ) async {
+      final today = normalizeDate(DateTime.now());
+      final todoRepository = _FakeTodoRepository(
+        todos: [
+          Todo(
+            id: '1',
+            title: 'Plan launch',
+            createdAt: today,
+            isCompleted: false,
+            dueDate: today,
+          ),
+        ],
+      );
+      final dateTagRepository = _FakeDateTagRepository(tags: const []);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            todoRepositoryProvider.overrideWithValue(todoRepository),
+            dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+          ],
+          child: const MaterialApp(home: TodoScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final monthLabel = formatTodoMonth(today);
+      final dueOnLabel = 'Due on ${formatTodoDate(today)}';
+
+      expect(find.text(monthLabel), findsOneWidget);
+      expect(find.text(dueOnLabel), findsOneWidget);
+
+      await tester.fling(find.text(monthLabel), const Offset(-500, 0), 1200);
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsNothing);
+      expect(find.text(dueOnLabel), findsNothing);
+      expect(find.text('Plan launch'), findsOneWidget);
+    });
+
+    testWidgets('swipe right on screen outside grid switches to list mode', (
+      WidgetTester tester,
+    ) async {
+      final today = normalizeDate(DateTime.now());
+      final todoRepository = _FakeTodoRepository(
+        todos: [
+          Todo(
+            id: '1',
+            title: 'Plan launch',
+            createdAt: today,
+            isCompleted: false,
+            dueDate: today,
+          ),
+        ],
+      );
+      final dateTagRepository = _FakeDateTagRepository(tags: const []);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            todoRepositoryProvider.overrideWithValue(todoRepository),
+            dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+          ],
+          child: const MaterialApp(home: TodoScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final monthLabel = formatTodoMonth(today);
+      final dueOnLabel = 'Due on ${formatTodoDate(today)}';
+
+      expect(find.text(monthLabel), findsOneWidget);
+      expect(find.text(dueOnLabel), findsOneWidget);
+
+      await tester.fling(find.text(monthLabel), const Offset(500, 0), 1200);
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsNothing);
+      expect(find.text(dueOnLabel), findsNothing);
+      expect(find.text('Plan launch'), findsOneWidget);
+    });
+
+    testWidgets('swipe left in list mode switches back to calendar mode', (
+      WidgetTester tester,
+    ) async {
+      final today = normalizeDate(DateTime.now());
+      final todoRepository = _FakeTodoRepository(
+        todos: [
+          Todo(
+            id: '1',
+            title: 'Plan launch',
+            createdAt: today,
+            isCompleted: false,
+            dueDate: today,
+          ),
+        ],
+      );
+      final dateTagRepository = _FakeDateTagRepository(tags: const []);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            todoRepositoryProvider.overrideWithValue(todoRepository),
+            dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+          ],
+          child: const MaterialApp(home: TodoScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final monthLabel = formatTodoMonth(today);
+      final dueOnLabel = 'Due on ${formatTodoDate(today)}';
+
+      await tester.tap(find.text('List'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsNothing);
+      expect(find.text(dueOnLabel), findsNothing);
+
+      await tester.fling(find.text('Plan launch'), const Offset(-500, 0), 1200);
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsOneWidget);
+      expect(find.text(dueOnLabel), findsOneWidget);
+    });
+
+    testWidgets('swipe right in list mode switches back to calendar mode', (
+      WidgetTester tester,
+    ) async {
+      final today = normalizeDate(DateTime.now());
+      final todoRepository = _FakeTodoRepository(
+        todos: [
+          Todo(
+            id: '1',
+            title: 'Plan launch',
+            createdAt: today,
+            isCompleted: false,
+            dueDate: today,
+          ),
+        ],
+      );
+      final dateTagRepository = _FakeDateTagRepository(tags: const []);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            todoRepositoryProvider.overrideWithValue(todoRepository),
+            dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+          ],
+          child: const MaterialApp(home: TodoScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final monthLabel = formatTodoMonth(today);
+      final dueOnLabel = 'Due on ${formatTodoDate(today)}';
+
+      await tester.tap(find.text('List'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsNothing);
+      expect(find.text(dueOnLabel), findsNothing);
+
+      await tester.fling(find.text('Plan launch'), const Offset(500, 0), 1200);
+      await tester.pumpAndSettle();
+
+      expect(find.text(monthLabel), findsOneWidget);
+      expect(find.text(dueOnLabel), findsOneWidget);
+    });
   });
 }
 

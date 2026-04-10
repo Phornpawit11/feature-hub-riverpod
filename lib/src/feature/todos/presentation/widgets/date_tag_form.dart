@@ -109,6 +109,15 @@ class DateTagForm extends HookWidget {
             if (onDelete != null)
               Expanded(
                 child: OutlinedButton.icon(
+                  style: ButtonStyle(
+                    side: WidgetStatePropertyAll(
+                      BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
                   onPressed: isSubmitting.value ? null : onDelete,
                   icon: const Icon(Icons.delete_outline_rounded),
                   label: const Text('Delete'),
