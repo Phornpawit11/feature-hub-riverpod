@@ -110,7 +110,7 @@ class _CollapsedComposer extends StatelessWidget {
                 children: [
                   Text(
                     'Add task',
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),

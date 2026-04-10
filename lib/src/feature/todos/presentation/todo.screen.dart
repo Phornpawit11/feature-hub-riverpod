@@ -293,6 +293,7 @@ class _FloatingViewModeSwitcher extends StatelessWidget {
           showSelectedIcon: false,
           style: ButtonStyle(
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+
             visualDensity: VisualDensity.compact,
             backgroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
@@ -316,7 +317,7 @@ class _FloatingViewModeSwitcher extends StatelessWidget {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
             padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
           segments: const [

@@ -43,6 +43,7 @@ class EditTodoDialog extends HookConsumerWidget {
 
     return AlertDialog(
       title: const Text('Edit todo'),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       content: SingleChildScrollView(
         child: SizedBox(
           width: math.min(MediaQuery.of(context).size.width, 420),
