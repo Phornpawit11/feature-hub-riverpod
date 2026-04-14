@@ -18,7 +18,7 @@ enum SGRoute {
 
 @riverpod
 GoRouter goRouter(Ref ref) => GoRouter(
-  initialLocation: SGRoute.landing.route,
+  initialLocation: SGRoute.todo.route,
   routes: <GoRoute>[
     GoRoute(
       path: SGRoute.landing.route,
