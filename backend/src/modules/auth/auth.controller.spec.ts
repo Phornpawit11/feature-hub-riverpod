@@ -67,4 +67,18 @@ describe('AuthController', () => {
     );
     expect(authService.loginWithGoogle).toHaveBeenCalledWith(googleLoginDto);
   });
+
+  it('returns current user from request in me endpoint', () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      provider: 'password',
+      avatarUrl: null,
+    };
+
+    const request = { user } as never;
+
+    expect(controller.me(request)).toEqual(user);
+  });
 });

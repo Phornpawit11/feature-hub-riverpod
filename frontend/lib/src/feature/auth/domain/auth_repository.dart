@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
+
+part 'auth_repository.freezed.dart';
 
 abstract class AuthRepository {
   Future<AuthSession> signInWithEmailPassword({
@@ -11,14 +14,12 @@ abstract class AuthRepository {
   Future<AuthUser> getCurrentUser(String accessToken);
 }
 
-class AuthSession {
-  const AuthSession({
-    required this.accessToken,
-    required this.user,
-  });
-
-  final String accessToken;
-  final AuthUser user;
+@freezed
+abstract class AuthSession with _$AuthSession {
+  const factory AuthSession({
+    required String accessToken,
+    required AuthUser user,
+  }) = _AuthSession;
 }
 
 class AuthException implements Exception {

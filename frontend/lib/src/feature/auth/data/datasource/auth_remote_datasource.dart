@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todos_riverpod/src/core/network/api_client_provider.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/google_login_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 
@@ -14,9 +18,10 @@ class AuthRemoteDatasource {
     required String password,
   }) async {
     try {
+      final request = LoginRequest(email: email, password: password);
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/login',
-        data: {'email': email, 'password': password},
+        data: request.toJson(),
       );
 
       return _parseSession(response.data);
@@ -27,9 +32,10 @@ class AuthRemoteDatasource {
 
   Future<AuthSession> signInWithGoogle({required String idToken}) async {
     try {
+      final request = GoogleLoginRequest(idToken: idToken);
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/google',
-        data: {'idToken': idToken},
+        data: request.toJson(),
       );
 
       return _parseSession(response.data);
@@ -56,16 +62,14 @@ class AuthRemoteDatasource {
       throw const AuthException('Invalid server response.');
     }
 
-    final accessToken = data['accessToken'] as String?;
-    final userJson = data['user'] as Map<String, dynamic>?;
-
-    if (accessToken == null || accessToken.isEmpty || userJson == null) {
+    final response = AuthSuccessResponse.fromJson(data);
+    if (response.accessToken.isEmpty) {
       throw const AuthException('Invalid server response.');
     }
 
     return AuthSession(
-      accessToken: accessToken,
-      user: AuthUser.fromJson(userJson),
+      accessToken: response.accessToken,
+      user: response.user,
     );
   }
 
@@ -73,12 +77,13 @@ class AuthRemoteDatasource {
     final data = error.response?.data;
 
     if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is String && message.isNotEmpty) {
+      final errorResponse = AuthErrorResponse.fromJson(data);
+
+      if (errorResponse.message case final message? when message.isNotEmpty) {
         return message;
       }
-      if (message is List && message.isNotEmpty) {
-        return message.join(', ');
+      if (errorResponse.messageList.isNotEmpty) {
+        return errorResponse.messageList.join(', ');
       }
     }
 

@@ -11,7 +11,8 @@
     "seed:password-user": "node scripts/seed-password-user.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:auth": "jest --runInBand auth"
+    "test:auth": "jest --runInBand auth",
+    "test:auth:e2e": "jest --runInBand auth.e2e"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -37,7 +38,9 @@
     "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
+    "@types/supertest": "^6.0.3",
     "jest": "^30.2.0",
+    "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
     "typescript": "^5.1.3"
   },

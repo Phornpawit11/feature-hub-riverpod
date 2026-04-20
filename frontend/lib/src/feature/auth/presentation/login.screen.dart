@@ -24,8 +24,7 @@ class LoginScreen extends HookConsumerWidget {
     final passwordError = useState<String?>(null);
     final isSubmitting = authState.status == AuthStatus.authenticating;
     final showGoogleButton = ref.watch(isMobileGoogleSignInSupportedProvider);
-    emailController.text = "test@example.com";
-    passwordController.text = "password123";
+
     void clearErrors() {
       emailError.value = null;
       passwordError.value = null;
