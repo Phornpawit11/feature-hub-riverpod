@@ -1,0 +1,95 @@
+openapi: 3.0.0
+info:
+  title: Todos API
+  version: 1.0.0
+paths:
+  /api/todos:
+    get:
+      summary: Get all todos
+      responses:
+        '200':
+          description: List of todos
+    post:
+      summary: Create a todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTodo'
+      responses:
+        '201':
+          description: Created
+  /api/todos/{id}:
+    get:
+      summary: Get a todo by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A todo
+    put:
+      summary: Update a todo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTodo'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete a todo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+components:
+  schemas:
+    Todo:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        isDone:
+          type: boolean
+    CreateTodo:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        isDone:
+          type: boolean
+    UpdateTodo:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        isDone:
+          type: boolean
