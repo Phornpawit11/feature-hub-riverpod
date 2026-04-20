@@ -635,55 +635,54 @@ void main() {
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Due on ${formatTodoDate(nextTaggedDate)}'),
-        findsOne,
-      );
+      expect(find.text('Due on ${formatTodoDate(nextTaggedDate)}'), findsOne);
       expect(find.text('Study'), findsWidgets);
       expect(find.text(formatTodoMonth(today)), findsOneWidget);
       expect(dateTagRepository.taggedDates, hasLength(1));
     });
 
-    testWidgets('remove keeps the same selected date when no tagged dates remain',
-        (WidgetTester tester) async {
-      final today = normalizeDate(DateTime.now());
-      final todoRepository = _FakeTodoRepository(
-        todos: [
-          Todo(
-            id: '1',
-            title: 'Plan launch',
-            createdAt: today,
-            isCompleted: false,
-            dueDate: today,
-          ),
-        ],
-      );
-      final dateTagRepository = _FakeDateTagRepository(
-        tags: [DateTag(id: 'work', name: 'Work', colorValue: 'FF5B8DEF')],
-        taggedDates: [
-          TaggedDate(id: dateStorageKey(today), date: today, tagId: 'work'),
-        ],
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            todoRepositoryProvider.overrideWithValue(todoRepository),
-            dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+    testWidgets(
+      'remove keeps the same selected date when no tagged dates remain',
+      (WidgetTester tester) async {
+        final today = normalizeDate(DateTime.now());
+        final todoRepository = _FakeTodoRepository(
+          todos: [
+            Todo(
+              id: '1',
+              title: 'Plan launch',
+              createdAt: today,
+              isCompleted: false,
+              dueDate: today,
+            ),
           ],
-          child: const MaterialApp(home: TodoScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        final dateTagRepository = _FakeDateTagRepository(
+          tags: [DateTag(id: 'work', name: 'Work', colorValue: 'FF5B8DEF')],
+          taggedDates: [
+            TaggedDate(id: dateStorageKey(today), date: today, tagId: 'work'),
+          ],
+        );
 
-      await _scrollToTagSection(tester);
-      await tester.tap(find.text('Remove'));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              todoRepositoryProvider.overrideWithValue(todoRepository),
+              dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
+            ],
+            child: const MaterialApp(home: TodoScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Due on ${formatTodoDate(today)}'), findsOneWidget);
-      expect(find.text('Add tag'), findsOneWidget);
-      expect(dateTagRepository.taggedDates, isEmpty);
-    });
+        await _scrollToTagSection(tester);
+        await tester.tap(find.text('Remove'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Due on ${formatTodoDate(today)}'), findsOneWidget);
+        expect(find.text('Add tag'), findsOneWidget);
+        expect(dateTagRepository.taggedDates, isEmpty);
+      },
+    );
 
     testWidgets('can edit an existing tag from the sheet', (
       WidgetTester tester,
@@ -1069,7 +1068,9 @@ DateTime _alternateDayInSameMonth(DateTime today) {
 
 TextStyle? _calendarDayLabelStyle(WidgetTester tester, DateTime day) {
   final widget = tester.widget(
-    find.byKey(ValueKey('calendar-day-label-${day.year}-${day.month}-${day.day}')),
+    find.byKey(
+      ValueKey('calendar-day-label-${day.year}-${day.month}-${day.day}'),
+    ),
   );
 
   if (widget is AutoSizeText) {

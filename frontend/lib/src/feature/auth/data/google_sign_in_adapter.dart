@@ -33,9 +33,7 @@ class GoogleSignInAdapter {
       final idToken = authentication.idToken;
 
       if (idToken == null || idToken.isEmpty) {
-        throw const AuthException(
-          'Google sign-in did not return an ID token.',
-        );
+        throw const AuthException('Google sign-in did not return an ID token.');
       }
 
       return idToken;

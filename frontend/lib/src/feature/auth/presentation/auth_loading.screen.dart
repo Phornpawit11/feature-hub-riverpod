@@ -16,7 +16,9 @@ class AuthLoadingScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: cs.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.45),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -104,16 +104,17 @@ class TodoScreen extends HookConsumerWidget {
       required DateTime month,
       required Map<DateTime, DateTag> assignedTagByDate,
     }) {
-      final monthCandidates = assignedTagByDate.keys
-          .map(dateOnly)
-          .where(
-            (date) =>
-                date.year == month.year &&
-                date.month == month.month &&
-                date != currentDate,
-          )
-          .toList()
-        ..sort();
+      final monthCandidates =
+          assignedTagByDate.keys
+              .map(dateOnly)
+              .where(
+                (date) =>
+                    date.year == month.year &&
+                    date.month == month.month &&
+                    date != currentDate,
+              )
+              .toList()
+            ..sort();
 
       for (final candidate in monthCandidates.reversed) {
         if (candidate.isBefore(currentDate)) {

@@ -14,10 +14,7 @@ void main() {
       final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
 
       await tester.pumpWidget(
-        _buildTestApp(
-          fakeNotifier: fakeNotifier,
-          showGoogleButton: false,
-        ),
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
       await tester.tap(find.text('Sign in'));
@@ -34,13 +31,13 @@ void main() {
       final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
 
       await tester.pumpWidget(
-        _buildTestApp(
-          fakeNotifier: fakeNotifier,
-          showGoogleButton: false,
-        ),
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
-      await tester.enterText(find.byType(TextField).at(0), ' test@example.com ');
+      await tester.enterText(
+        find.byType(TextField).at(0),
+        ' test@example.com ',
+      );
       await tester.enterText(find.byType(TextField).at(1), 'password123');
       await tester.tap(find.text('Sign in'));
       await tester.pump();
@@ -61,10 +58,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _buildTestApp(
-          fakeNotifier: fakeNotifier,
-          showGoogleButton: false,
-        ),
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
       expect(find.text('Invalid email or password'), findsOneWidget);
@@ -78,13 +72,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _buildTestApp(
-          fakeNotifier: fakeNotifier,
-          showGoogleButton: false,
-        ),
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
-      final signInButton = tester.widget<FilledButton>(find.byType(FilledButton));
+      final signInButton = tester.widget<FilledButton>(
+        find.byType(FilledButton),
+      );
 
       expect(signInButton.onPressed, isNull);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -96,10 +89,7 @@ void main() {
       final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
 
       await tester.pumpWidget(
-        _buildTestApp(
-          fakeNotifier: fakeNotifier,
-          showGoogleButton: false,
-        ),
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
       expect(find.text('Continue with Google'), findsNothing);
@@ -116,9 +106,7 @@ Widget _buildTestApp({
       authNotifierProvider.overrideWith(() => fakeNotifier),
       isMobileGoogleSignInSupportedProvider.overrideWithValue(showGoogleButton),
     ],
-    child: const MaterialApp(
-      home: LoginScreen(),
-    ),
+    child: const MaterialApp(home: LoginScreen()),
   );
 }
 

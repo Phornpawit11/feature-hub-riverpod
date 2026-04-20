@@ -9,11 +9,7 @@ enum AuthStatus {
 }
 
 class AuthState {
-  const AuthState({
-    required this.status,
-    this.user,
-    this.errorMessage,
-  });
+  const AuthState({required this.status, this.user, this.errorMessage});
 
   final AuthStatus status;
   final AuthUser? user;
