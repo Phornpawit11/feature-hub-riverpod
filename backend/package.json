@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "NestJS backend for Todos app",
   "scripts": {
+    "prebuild": "rm -rf dist",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
