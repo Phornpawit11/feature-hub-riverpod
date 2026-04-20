@@ -10,6 +10,7 @@ void main() async {
 Future<void> bootstrap() async {
   /// Initialize packages
   WidgetsFlutterBinding.ensureInitialized();
+  await setPreferredOrientations();
   await HiveInitializer.init();
 
   runApp(ProviderScope(child: MyApp()));

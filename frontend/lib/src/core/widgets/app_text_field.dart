@@ -6,21 +6,33 @@ class AppTextField extends StatelessWidget {
     this.controller,
     this.hintText,
     this.prefixIcon,
+    this.suffixIcon,
     this.errorText,
     this.onChanged,
     this.onSubmitted,
     this.textInputAction,
     this.autofocus = false,
+    this.obscureText = false,
+    this.keyboardType,
+    this.enabled = true,
+    this.autofillHints,
+    this.focusNode,
   });
 
   final TextEditingController? controller;
   final String? hintText;
   final IconData? prefixIcon;
+  final Widget? suffixIcon;
   final String? errorText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextInputAction? textInputAction;
   final bool autofocus;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final bool enabled;
+  final Iterable<String>? autofillHints;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +41,12 @@ class AppTextField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       autofocus: autofocus,
+      enabled: enabled,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      autofillHints: autofillHints,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: textInputAction,
@@ -50,6 +67,7 @@ class AppTextField extends StatelessWidget {
         prefixIcon: prefixIcon == null
             ? null
             : Icon(prefixIcon, size: 20, color: cs.onSurfaceVariant),
+        suffixIcon: suffixIcon,
         prefixIconConstraints: const BoxConstraints(
           minHeight: 20,
           minWidth: 48,

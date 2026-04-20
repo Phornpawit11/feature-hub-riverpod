@@ -1,0 +1,70 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
+
+describe('AuthController', () => {
+  const authService = {
+    login: jest.fn(),
+    loginWithGoogle: jest.fn(),
+  } as unknown as jest.Mocked<AuthService>;
+
+  let controller: AuthController;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    controller = new AuthController(authService);
+  });
+
+  it('delegates login to auth service', async () => {
+    const loginDto: LoginDto = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
+    const response = {
+      accessToken: 'jwt-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        provider: 'password',
+        avatarUrl: null,
+      },
+    };
+
+    authService.login.mockResolvedValue(response as never);
+
+    await expect(controller.login(loginDto)).resolves.toEqual(response);
+    expect(authService.login).toHaveBeenCalledWith(loginDto);
+  });
+
+  it('delegates google login to auth service', async () => {
+    const googleLoginDto: GoogleLoginDto = {
+      idToken: 'google-id-token',
+    };
+    const response = {
+      accessToken: 'jwt-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        provider: 'google',
+        avatarUrl: null,
+      },
+    };
+
+    authService.loginWithGoogle.mockResolvedValue(response as never);
+
+    await expect(controller.loginWithGoogle(googleLoginDto)).resolves.toEqual(
+      response,
+    );
+    expect(authService.loginWithGoogle).toHaveBeenCalledWith(googleLoginDto);
+  });
+});

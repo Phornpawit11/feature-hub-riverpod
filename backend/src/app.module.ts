@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './modules/auth/auth.module';
 import { TodosModule } from './modules/todos/todos.module';
+
+const defaultMongoUri = 'mongodb://127.0.0.1:27017/todos';
 
 @Module({
   imports: [
@@ -11,10 +14,11 @@ import { TodosModule } from './modules/todos/todos.module';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
+        uri: configService.get<string>('MONGODB_URI') || defaultMongoUri,
       }),
       inject: [ConfigService],
     }),
+    AuthModule,
     TodosModule,
   ],
 })

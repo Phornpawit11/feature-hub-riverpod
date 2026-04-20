@@ -3,25 +3,60 @@
   "version": "0.0.1",
   "description": "NestJS backend for Todos app",
   "scripts": {
-    "prebuild": "rm -rf dist",
+    "prebuild": "rm -rf dist tsconfig.tsbuildinfo",
     "build": "nest build",
     "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:prod": "node dist/main"
+    "start:dev": "rm -rf dist tsconfig.tsbuildinfo && nest start --watch",
+    "start:prod": "node dist/main",
+    "seed:password-user": "node scripts/seed-password-user.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:auth": "jest --runInBand auth"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/jwt": "^10.2.0",
     "@nestjs/mongoose": "^10.0.0",
+    "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
+    "bcrypt": "^5.1.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "google-auth-library": "^9.15.1",
     "mongoose": "^8.0.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
     "typescript": "^5.1.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.spec.json"
+        }
+      ]
+    },
+    "testEnvironment": "node"
   }
 }
