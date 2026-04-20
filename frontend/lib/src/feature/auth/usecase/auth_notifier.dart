@@ -20,20 +20,73 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> restoreSession() async {
     state = state.copyWith(status: AuthStatus.restoring, clearError: true);
 
-    final token = await _storage.readAccessToken();
-    if (token == null || token.isEmpty) {
+    final accessToken = await _storage.readAccessToken();
+    final refreshToken = await _storage.readRefreshToken();
+
+    if ((accessToken == null || accessToken.isEmpty) &&
+        (refreshToken == null || refreshToken.isEmpty)) {
+      state = AuthState.unauthenticated;
+      return;
+    }
+
+    if (accessToken != null && accessToken.isNotEmpty) {
+      try {
+        final user = await _repository.getCurrentUser(accessToken);
+        state = AuthState(status: AuthStatus.authenticated, user: user);
+        return;
+      } on AuthException catch (error) {
+        if (error.statusCode == null) {
+          state = AuthState(
+            status: AuthStatus.failure,
+            errorMessage: error.message,
+          );
+          return;
+        }
+
+        if (error.statusCode != 401 ||
+            refreshToken == null ||
+            refreshToken.isEmpty) {
+          await _storage.clearTokens();
+          state = AuthState.unauthenticated;
+          return;
+        }
+      } catch (_) {
+        await _storage.clearTokens();
+        state = AuthState.unauthenticated;
+        return;
+      }
+    }
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      await _storage.clearTokens();
       state = AuthState.unauthenticated;
       return;
     }
 
     try {
-      final user = await _repository.getCurrentUser(token);
+      final session = await _repository.refreshSession(
+        refreshToken: refreshToken,
+      );
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+
+      final user = await _repository.getCurrentUser(session.accessToken);
       state = AuthState(status: AuthStatus.authenticated, user: user);
-    } on AuthException {
-      await _storage.clearAccessToken();
+    } on AuthException catch (error) {
+      if (error.statusCode == null) {
+        state = AuthState(
+          status: AuthStatus.failure,
+          errorMessage: error.message,
+        );
+        return;
+      }
+
+      await _storage.clearTokens();
       state = AuthState.unauthenticated;
     } catch (_) {
-      await _storage.clearAccessToken();
+      await _storage.clearTokens();
       state = AuthState.unauthenticated;
     }
   }
@@ -49,8 +102,11 @@ class AuthNotifier extends Notifier<AuthState> {
         email: email.trim(),
         password: password,
       );
-      await _storage.writeAccessToken(session.accessToken);
-      state = AuthState(status: AuthStatus.authenticated, user: session.user);
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+      setAuthenticatedSession(session);
     } on AuthException catch (error) {
       state = AuthState(
         status: AuthStatus.failure,
@@ -78,8 +134,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
     try {
       final session = await _repository.signInWithGoogle();
-      await _storage.writeAccessToken(session.accessToken);
-      state = AuthState(status: AuthStatus.authenticated, user: session.user);
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+      setAuthenticatedSession(session);
     } on AuthException catch (error) {
       state = AuthState(
         status: AuthStatus.failure,
@@ -94,7 +153,15 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await _storage.clearAccessToken();
+    final refreshToken = await _storage.readRefreshToken();
+
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _repository.logout(refreshToken: refreshToken);
+      } catch (_) {}
+    }
+
+    await _storage.clearTokens();
     state = AuthState.unauthenticated;
   }
 
@@ -108,6 +175,14 @@ class AuthNotifier extends Notifier<AuthState> {
       clearError: true,
       clearUser: true,
     );
+  }
+
+  void setAuthenticatedSession(AuthSession session) {
+    state = AuthState(status: AuthStatus.authenticated, user: session.user);
+  }
+
+  void expireSession() {
+    state = AuthState.unauthenticated;
   }
 }
 

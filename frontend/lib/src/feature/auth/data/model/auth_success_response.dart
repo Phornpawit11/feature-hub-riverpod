@@ -8,6 +8,7 @@ part 'auth_success_response.g.dart';
 abstract class AuthSuccessResponse with _$AuthSuccessResponse {
   const factory AuthSuccessResponse({
     required String accessToken,
+    required String refreshToken,
     required AuthUser user,
   }) = _AuthSuccessResponse;
 

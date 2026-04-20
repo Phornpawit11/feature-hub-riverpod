@@ -15,9 +15,11 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from './user.schema';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
+  hash: jest.fn(),
 }));
 
 describe('AuthController (e2e)', () => {
@@ -25,10 +27,12 @@ describe('AuthController (e2e)', () => {
 
   const userModel = {
     findOne: jest.fn(),
+    findById: jest.fn(),
   };
 
   const jwtService = {
     signAsync: jest.fn(),
+    verifyAsync: jest.fn(),
   };
 
   const configService = {
@@ -39,6 +43,8 @@ describe('AuthController (e2e)', () => {
   let validationPipe: ValidationPipe;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
@@ -66,9 +72,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-    jest.clearAllMocks();
-
-  it('returns access token and user for valid login', async () => {
+  it('returns access and refresh tokens for valid login', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockImplementation(async () => ({
         id: 'user-1',
@@ -77,10 +81,15 @@ describe('AuthController (e2e)', () => {
         displayName: 'Test User',
         avatarUrl: null,
         provider: 'password',
+        save: jest.fn(),
       })),
     });
     mockedBcrypt.compare.mockResolvedValue(true as never);
-    jwtService.signAsync.mockImplementation(async () => 'jwt-token');
+    mockedBcrypt.hash.mockResolvedValue('hashed-refresh-token' as never);
+    jwtService.signAsync
+      .mockResolvedValueOnce('jwt-token' as never)
+      .mockResolvedValueOnce('refresh-token' as never);
+    jwtService.verifyAsync.mockResolvedValue({ exp: 2_000_000_000 } as never);
 
     const loginDto = (await validationPipe.transform(
       {
@@ -97,6 +106,7 @@ describe('AuthController (e2e)', () => {
 
     expect(response).toEqual({
       accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
       user: {
         id: 'user-1',
         email: 'test@example.com',
@@ -118,6 +128,7 @@ describe('AuthController (e2e)', () => {
         passwordHash: 'hashed-password',
         displayName: 'Test User',
         provider: 'password',
+        save: jest.fn(),
       })),
     });
     mockedBcrypt.compare.mockResolvedValue(false as never);
@@ -162,5 +173,19 @@ describe('AuthController (e2e)', () => {
         ]),
       },
     });
+  });
+
+  it('accepts valid refresh payload shape', async () => {
+    const refreshDto = (await validationPipe.transform(
+      {
+        refreshToken: 'refresh-token',
+      },
+      {
+        type: 'body',
+        metatype: RefreshTokenDto,
+      },
+    )) as RefreshTokenDto;
+
+    expect(refreshDto).toEqual({ refreshToken: 'refresh-token' });
   });
 });

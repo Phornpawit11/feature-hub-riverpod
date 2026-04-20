@@ -23,6 +23,12 @@ export class User {
 
   @Prop({ unique: true, sparse: true })
   googleSub?: string;
+
+  @Prop()
+  refreshTokenHash?: string;
+
+  @Prop()
+  refreshTokenExpiresAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

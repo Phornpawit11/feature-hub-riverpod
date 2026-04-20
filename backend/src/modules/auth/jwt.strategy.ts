@@ -7,7 +7,7 @@ import { Model } from 'mongoose';
 import { JwtPayload } from './auth-user.types';
 import { User, UserDocument } from './user.schema';
 import { AuthService } from './auth.service';
-import { resolveJwtSecret } from '../../config/auth.config';
+import { resolveJwtAccessSecret } from '../../config/auth.config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -19,7 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: resolveJwtSecret(configService.get<string>('JWT_SECRET')),
+      secretOrKey: resolveJwtAccessSecret(
+        configService.get<string>('JWT_ACCESS_SECRET'),
+      ),
     });
   }
 

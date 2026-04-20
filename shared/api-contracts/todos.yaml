@@ -77,6 +77,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
+  /api/auth/refresh:
+    post:
+      summary: Refresh auth session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Authentication success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+  /api/auth/logout:
+    post:
+      summary: Logout current refresh session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
   /api/todos:
     get:
       summary: Get all todos
@@ -184,16 +222,42 @@ components:
         idToken:
           type: string
           minLength: 1
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+    LogoutRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
     AuthSuccessResponse:
       type: object
       required:
         - accessToken
+        - refreshToken
         - user
       properties:
         accessToken:
           type: string
+        refreshToken:
+          type: string
         user:
           $ref: '#/components/schemas/AuthUser'
+    LogoutResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
     AuthErrorResponse:
       type: object
       required:

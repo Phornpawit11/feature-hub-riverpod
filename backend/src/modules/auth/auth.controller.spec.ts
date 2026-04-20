@@ -9,11 +9,15 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 describe('AuthController', () => {
   const authService = {
     login: jest.fn(),
     loginWithGoogle: jest.fn(),
+    refresh: jest.fn(),
+    logout: jest.fn(),
   } as unknown as jest.Mocked<AuthService>;
 
   let controller: AuthController;
@@ -30,6 +34,7 @@ describe('AuthController', () => {
     };
     const response = {
       accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
       user: {
         id: 'user-1',
         email: 'test@example.com',
@@ -51,6 +56,7 @@ describe('AuthController', () => {
     };
     const response = {
       accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
       user: {
         id: 'user-1',
         email: 'test@example.com',
@@ -66,6 +72,41 @@ describe('AuthController', () => {
       response,
     );
     expect(authService.loginWithGoogle).toHaveBeenCalledWith(googleLoginDto);
+  });
+
+  it('delegates refresh to auth service', async () => {
+    const refreshTokenDto: RefreshTokenDto = {
+      refreshToken: 'refresh-token',
+    };
+    const response = {
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        provider: 'password',
+        avatarUrl: null,
+      },
+    };
+
+    authService.refresh.mockResolvedValue(response as never);
+
+    await expect(controller.refresh(refreshTokenDto)).resolves.toEqual(response);
+    expect(authService.refresh).toHaveBeenCalledWith(refreshTokenDto);
+  });
+
+  it('delegates logout to auth service', async () => {
+    const logoutDto: LogoutDto = {
+      refreshToken: 'refresh-token',
+    };
+
+    authService.logout.mockResolvedValue({ success: true } as never);
+
+    await expect(controller.logout(logoutDto)).resolves.toEqual({
+      success: true,
+    });
+    expect(authService.logout).toHaveBeenCalledWith(logoutDto);
   });
 
   it('returns current user from request in me endpoint', () => {

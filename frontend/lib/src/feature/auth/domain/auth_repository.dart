@@ -11,6 +11,10 @@ abstract class AuthRepository {
 
   Future<AuthSession> signInWithGoogle();
 
+  Future<AuthSession> refreshSession({required String refreshToken});
+
+  Future<void> logout({required String refreshToken});
+
   Future<AuthUser> getCurrentUser(String accessToken);
 }
 
@@ -18,14 +22,16 @@ abstract class AuthRepository {
 abstract class AuthSession with _$AuthSession {
   const factory AuthSession({
     required String accessToken,
+    required String refreshToken,
     required AuthUser user,
   }) = _AuthSession;
 }
 
 class AuthException implements Exception {
-  const AuthException(this.message);
+  const AuthException(this.message, {this.statusCode});
 
   final String message;
+  final int? statusCode;
 
   @override
   String toString() => message;

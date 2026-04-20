@@ -26,6 +26,16 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   }
 
   @override
+  Future<AuthSession> refreshSession({required String refreshToken}) {
+    return _remoteDatasource.refreshSession(refreshToken: refreshToken);
+  }
+
+  @override
+  Future<void> logout({required String refreshToken}) {
+    return _remoteDatasource.logout(refreshToken: refreshToken);
+  }
+
+  @override
   Future<AuthSession> signInWithEmailPassword({
     required String email,
     required String password,

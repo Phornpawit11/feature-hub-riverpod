@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
 import 'package:todos_riverpod/src/feature/auth/data/providers/auth_repository_provider.dart';
@@ -32,94 +32,150 @@ void main() {
       container.dispose();
     });
 
-    test('restoreSession authenticates when stored token is valid', () async {
-      fakeStorage.storedToken = 'saved-token';
-      fakeRepository.currentUser = _testUser();
+    test(
+      'restoreSession authenticates when stored access token is valid',
+      () async {
+        fakeStorage.storedAccessToken = 'saved-access-token';
+        fakeRepository.currentUser = _testUser();
 
-      final notifier = container.read(authNotifierProvider.notifier);
-      await Future<void>.delayed(Duration.zero);
-      fakeRepository.lastCurrentUserToken = null;
-      await notifier.restoreSession();
+        final notifier = container.read(authNotifierProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        fakeRepository.lastCurrentUserToken = null;
+        await notifier.restoreSession();
 
-      final state = container.read(authNotifierProvider);
+        final state = container.read(authNotifierProvider);
 
-      expect(fakeRepository.lastCurrentUserToken, 'saved-token');
-      expect(state.status, AuthStatus.authenticated);
-      expect(state.user?.email, 'test@example.com');
-    });
+        expect(fakeRepository.lastCurrentUserToken, 'saved-access-token');
+        expect(state.status, AuthStatus.authenticated);
+        expect(state.user?.email, 'test@example.com');
+      },
+    );
 
-    test('restoreSession clears token when stored token is invalid', () async {
-      fakeStorage.storedToken = 'expired-token';
-      fakeRepository.currentUserError = const AuthException('Invalid token');
+    test(
+      'restoreSession refreshes tokens when access token is invalid',
+      () async {
+        fakeStorage.storedAccessToken = 'expired-access-token';
+        fakeStorage.storedRefreshToken = 'refresh-token';
+        fakeRepository.currentUserError = const AuthException(
+          'Invalid token',
+          statusCode: 401,
+        );
+        fakeRepository.refreshSessionResult = AuthSession(
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+          user: _testUser(),
+        );
+        fakeRepository.userByToken['new-access-token'] = _testUser();
 
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.restoreSession();
+        final notifier = container.read(authNotifierProvider.notifier);
+        await notifier.restoreSession();
 
-      final state = container.read(authNotifierProvider);
+        final state = container.read(authNotifierProvider);
 
-      expect(state.status, AuthStatus.unauthenticated);
-      expect(fakeStorage.storedToken, isNull);
-      expect(fakeStorage.clearAccessTokenCallCount, greaterThanOrEqualTo(1));
-    });
+        expect(fakeRepository.lastRefreshToken, 'refresh-token');
+        expect(fakeStorage.storedAccessToken, 'new-access-token');
+        expect(fakeStorage.storedRefreshToken, 'new-refresh-token');
+        expect(state.status, AuthStatus.authenticated);
+      },
+    );
 
-    test('signInWithEmailPassword stores token and authenticates on success', () async {
-      fakeRepository.emailSession = AuthSession(
-        accessToken: 'jwt-token',
-        user: _testUser(),
-      );
+    test(
+      'restoreSession clears tokens when refresh token is invalid',
+      () async {
+        fakeStorage.storedAccessToken = 'expired-access-token';
+        fakeStorage.storedRefreshToken = 'bad-refresh-token';
+        fakeRepository.currentUserError = const AuthException(
+          'Invalid token',
+          statusCode: 401,
+        );
+        fakeRepository.refreshError = const AuthException(
+          'Invalid refresh token',
+          statusCode: 401,
+        );
 
-      final notifier = container.read(authNotifierProvider.notifier);
-      await Future<void>.delayed(Duration.zero);
-      await notifier.signInWithEmailPassword(
-        email: ' test@example.com ',
-        password: 'password123',
-      );
+        final notifier = container.read(authNotifierProvider.notifier);
+        await notifier.restoreSession();
 
-      final state = container.read(authNotifierProvider);
+        final state = container.read(authNotifierProvider);
 
-      expect(fakeRepository.lastEmail, 'test@example.com');
-      expect(fakeRepository.lastPassword, 'password123');
-      expect(fakeStorage.storedToken, 'jwt-token');
-      expect(state.status, AuthStatus.authenticated);
-      expect(state.user?.displayName, 'Test User');
-    });
+        expect(state.status, AuthStatus.unauthenticated);
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+        expect(fakeStorage.clearTokensCallCount, greaterThanOrEqualTo(1));
+      },
+    );
 
-    test('signInWithEmailPassword exposes backend auth error on failure', () async {
-      fakeRepository.emailError = const AuthException('Invalid email or password');
+    test(
+      'signInWithEmailPassword stores tokens and authenticates on success',
+      () async {
+        fakeRepository.emailSession = AuthSession(
+          accessToken: 'jwt-token',
+          refreshToken: 'refresh-token',
+          user: _testUser(),
+        );
 
-      final notifier = container.read(authNotifierProvider.notifier);
-      await Future<void>.delayed(Duration.zero);
-      await notifier.signInWithEmailPassword(
-        email: 'test@example.com',
-        password: 'wrong-password',
-      );
+        final notifier = container.read(authNotifierProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        await notifier.signInWithEmailPassword(
+          email: ' test@example.com ',
+          password: 'password123',
+        );
 
-      final state = container.read(authNotifierProvider);
+        final state = container.read(authNotifierProvider);
 
-      expect(state.status, AuthStatus.failure);
-      expect(state.errorMessage, 'Invalid email or password');
-      expect(fakeStorage.storedToken, isNull);
-    });
+        expect(fakeRepository.lastEmail, 'test@example.com');
+        expect(fakeRepository.lastPassword, 'password123');
+        expect(fakeStorage.storedAccessToken, 'jwt-token');
+        expect(fakeStorage.storedRefreshToken, 'refresh-token');
+        expect(state.status, AuthStatus.authenticated);
+        expect(state.user?.displayName, 'Test User');
+      },
+    );
 
-    test('signOut clears token and returns to unauthenticated', () async {
-      fakeStorage.storedToken = 'jwt-token';
-      final notifier = container.read(authNotifierProvider.notifier);
-      await Future<void>.delayed(Duration.zero);
-      fakeStorage.clearAccessTokenCallCount = 0;
+    test(
+      'signInWithEmailPassword exposes backend auth error on failure',
+      () async {
+        fakeRepository.emailError = const AuthException(
+          'Invalid email or password',
+        );
 
-      await notifier.signInWithEmailPassword(
-        email: 'test@example.com',
-        password: 'password123',
-      );
-      fakeStorage.clearAccessTokenCallCount = 0;
-      await notifier.signOut();
+        final notifier = container.read(authNotifierProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        await notifier.signInWithEmailPassword(
+          email: 'test@example.com',
+          password: 'wrong-password',
+        );
 
-      final state = container.read(authNotifierProvider);
+        final state = container.read(authNotifierProvider);
 
-      expect(fakeStorage.clearAccessTokenCallCount, 1);
-      expect(state.status, AuthStatus.unauthenticated);
-      expect(fakeStorage.storedToken, isNull);
-    });
+        expect(state.status, AuthStatus.failure);
+        expect(state.errorMessage, 'Invalid email or password');
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+      },
+    );
+
+    test(
+      'signOut calls logout best-effort, clears tokens and unauthenticates',
+      () async {
+        fakeStorage.storedAccessToken = 'jwt-token';
+        fakeStorage.storedRefreshToken = 'refresh-token';
+        fakeRepository.currentUser = _testUser();
+        final notifier = container.read(authNotifierProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        fakeStorage.clearTokensCallCount = 0;
+
+        await notifier.signOut();
+
+        final state = container.read(authNotifierProvider);
+
+        expect(fakeRepository.lastLogoutRefreshToken, 'refresh-token');
+        expect(fakeStorage.clearTokensCallCount, 1);
+        expect(state.status, AuthStatus.unauthenticated);
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+      },
+    );
   });
 }
 
@@ -137,21 +193,46 @@ class _FakeAuthRepository implements AuthRepository {
   AuthException? emailError;
   AuthSession? googleSession;
   AuthException? googleError;
+  AuthSession? refreshSessionResult;
+  AuthException? refreshError;
   AuthUser? currentUser;
   AuthException? currentUserError;
+  final Map<String, AuthUser> userByToken = {};
   String? lastEmail;
   String? lastPassword;
   String? lastCurrentUserToken;
+  String? lastRefreshToken;
+  String? lastLogoutRefreshToken;
 
   @override
   Future<AuthUser> getCurrentUser(String accessToken) async {
     lastCurrentUserToken = accessToken;
+
+    if (userByToken.containsKey(accessToken)) {
+      return userByToken[accessToken]!;
+    }
 
     if (currentUserError != null) {
       throw currentUserError!;
     }
 
     return currentUser!;
+  }
+
+  @override
+  Future<void> logout({required String refreshToken}) async {
+    lastLogoutRefreshToken = refreshToken;
+  }
+
+  @override
+  Future<AuthSession> refreshSession({required String refreshToken}) async {
+    lastRefreshToken = refreshToken;
+
+    if (refreshError != null) {
+      throw refreshError!;
+    }
+
+    return refreshSessionResult!;
   }
 
   @override
@@ -169,6 +250,7 @@ class _FakeAuthRepository implements AuthRepository {
     return emailSession ??
         AuthSession(
           accessToken: 'jwt-token',
+          refreshToken: 'refresh-token',
           user: _testUser(),
         );
   }
@@ -182,6 +264,7 @@ class _FakeAuthRepository implements AuthRepository {
     return googleSession ??
         AuthSession(
           accessToken: 'google-token',
+          refreshToken: 'google-refresh-token',
           user: _testUser(),
         );
   }
@@ -190,22 +273,34 @@ class _FakeAuthRepository implements AuthRepository {
 class _FakeSecureTokenStorage extends SecureTokenStorage {
   _FakeSecureTokenStorage() : super(const FlutterSecureStorage());
 
-  String? storedToken;
-  int clearAccessTokenCallCount = 0;
+  String? storedAccessToken;
+  String? storedRefreshToken;
+  int clearTokensCallCount = 0;
 
   @override
-  Future<void> clearAccessToken() async {
-    clearAccessTokenCallCount++;
-    storedToken = null;
+  Future<void> clearTokens() async {
+    clearTokensCallCount++;
+    storedAccessToken = null;
+    storedRefreshToken = null;
   }
 
   @override
   Future<String?> readAccessToken() async {
-    return storedToken;
+    return storedAccessToken;
+  }
+
+  @override
+  Future<String?> readRefreshToken() async {
+    return storedRefreshToken;
   }
 
   @override
   Future<void> writeAccessToken(String token) async {
-    storedToken = token;
+    storedAccessToken = token;
+  }
+
+  @override
+  Future<void> writeRefreshToken(String token) async {
+    storedRefreshToken = token;
   }
 }

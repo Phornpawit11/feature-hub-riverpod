@@ -10,10 +10,20 @@ export interface AuthUserResponse {
 
 export interface AuthSuccessResponse {
   accessToken: string;
+  refreshToken: string;
   user: AuthUserResponse;
+}
+
+export interface LogoutResponse {
+  success: boolean;
 }
 
 export interface JwtPayload {
   sub: string;
   email: string;
+}
+
+export interface JwtPayloadWithExpiry extends JwtPayload {
+  exp?: number;
+  iat?: number;
 }

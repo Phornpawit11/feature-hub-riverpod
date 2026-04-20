@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AuthSuccessResponse {
 
- String get accessToken; AuthUser get user;
+ String get accessToken; String get refreshToken; AuthUser get user;
 /// Create a copy of AuthSuccessResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AuthSuccessResponseCopyWith<AuthSuccessResponse> get copyWith => _$AuthSuccessR
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthSuccessResponse&&(identical(other.accessToken, accessToken) || other.accessToken == accessToken)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthSuccessResponse&&(identical(other.accessToken, accessToken) || other.accessToken == accessToken)&&(identical(other.refreshToken, refreshToken) || other.refreshToken == refreshToken)&&(identical(other.user, user) || other.user == user));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,accessToken,user);
+int get hashCode => Object.hash(runtimeType,accessToken,refreshToken,user);
 
 @override
 String toString() {
-  return 'AuthSuccessResponse(accessToken: $accessToken, user: $user)';
+  return 'AuthSuccessResponse(accessToken: $accessToken, refreshToken: $refreshToken, user: $user)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AuthSuccessResponseCopyWith<$Res>  {
   factory $AuthSuccessResponseCopyWith(AuthSuccessResponse value, $Res Function(AuthSuccessResponse) _then) = _$AuthSuccessResponseCopyWithImpl;
 @useResult
 $Res call({
- String accessToken, AuthUser user
+ String accessToken, String refreshToken, AuthUser user
 });
 
 
@@ -65,9 +65,10 @@ class _$AuthSuccessResponseCopyWithImpl<$Res>
 
 /// Create a copy of AuthSuccessResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? accessToken = null,Object? user = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? accessToken = null,Object? refreshToken = null,Object? user = null,}) {
   return _then(_self.copyWith(
 accessToken: null == accessToken ? _self.accessToken : accessToken // ignore: cast_nullable_to_non_nullable
+as String,refreshToken: null == refreshToken ? _self.refreshToken : refreshToken // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as AuthUser,
   ));
@@ -163,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String accessToken,  AuthUser user)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String accessToken,  String refreshToken,  AuthUser user)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthSuccessResponse() when $default != null:
-return $default(_that.accessToken,_that.user);case _:
+return $default(_that.accessToken,_that.refreshToken,_that.user);case _:
   return orElse();
 
 }
@@ -184,10 +185,10 @@ return $default(_that.accessToken,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String accessToken,  AuthUser user)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String accessToken,  String refreshToken,  AuthUser user)  $default,) {final _that = this;
 switch (_that) {
 case _AuthSuccessResponse():
-return $default(_that.accessToken,_that.user);case _:
+return $default(_that.accessToken,_that.refreshToken,_that.user);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +205,10 @@ return $default(_that.accessToken,_that.user);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String accessToken,  AuthUser user)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String accessToken,  String refreshToken,  AuthUser user)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthSuccessResponse() when $default != null:
-return $default(_that.accessToken,_that.user);case _:
+return $default(_that.accessToken,_that.refreshToken,_that.user);case _:
   return null;
 
 }
@@ -219,10 +220,11 @@ return $default(_that.accessToken,_that.user);case _:
 @JsonSerializable()
 
 class _AuthSuccessResponse implements AuthSuccessResponse {
-  const _AuthSuccessResponse({required this.accessToken, required this.user});
+  const _AuthSuccessResponse({required this.accessToken, required this.refreshToken, required this.user});
   factory _AuthSuccessResponse.fromJson(Map<String, dynamic> json) => _$AuthSuccessResponseFromJson(json);
 
 @override final  String accessToken;
+@override final  String refreshToken;
 @override final  AuthUser user;
 
 /// Create a copy of AuthSuccessResponse
@@ -238,16 +240,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthSuccessResponse&&(identical(other.accessToken, accessToken) || other.accessToken == accessToken)&&(identical(other.user, user) || other.user == user));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthSuccessResponse&&(identical(other.accessToken, accessToken) || other.accessToken == accessToken)&&(identical(other.refreshToken, refreshToken) || other.refreshToken == refreshToken)&&(identical(other.user, user) || other.user == user));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,accessToken,user);
+int get hashCode => Object.hash(runtimeType,accessToken,refreshToken,user);
 
 @override
 String toString() {
-  return 'AuthSuccessResponse(accessToken: $accessToken, user: $user)';
+  return 'AuthSuccessResponse(accessToken: $accessToken, refreshToken: $refreshToken, user: $user)';
 }
 
 
@@ -258,7 +260,7 @@ abstract mixin class _$AuthSuccessResponseCopyWith<$Res> implements $AuthSuccess
   factory _$AuthSuccessResponseCopyWith(_AuthSuccessResponse value, $Res Function(_AuthSuccessResponse) _then) = __$AuthSuccessResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String accessToken, AuthUser user
+ String accessToken, String refreshToken, AuthUser user
 });
 
 
@@ -275,9 +277,10 @@ class __$AuthSuccessResponseCopyWithImpl<$Res>
 
 /// Create a copy of AuthSuccessResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? accessToken = null,Object? user = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? accessToken = null,Object? refreshToken = null,Object? user = null,}) {
   return _then(_AuthSuccessResponse(
 accessToken: null == accessToken ? _self.accessToken : accessToken // ignore: cast_nullable_to_non_nullable
+as String,refreshToken: null == refreshToken ? _self.refreshToken : refreshToken // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as AuthUser,
   ));

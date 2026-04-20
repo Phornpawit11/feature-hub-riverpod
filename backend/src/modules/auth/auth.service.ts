@@ -12,10 +12,18 @@ import {
   AuthSuccessResponse,
   AuthUserResponse,
   JwtPayload,
+  JwtPayloadWithExpiry,
+  LogoutResponse,
 } from './auth-user.types';
 import { User, UserDocument } from './user.schema';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
+import {
+  resolveJwtRefreshExpiresIn,
+  resolveJwtRefreshSecret,
+} from '../../config/auth.config';
 
 @Injectable()
 export class AuthService {
@@ -95,6 +103,48 @@ export class AuthService {
     return this.createAuthResponse(user);
   }
 
+  async refresh(
+    refreshTokenDto: RefreshTokenDto,
+  ): Promise<AuthSuccessResponse> {
+    const payload = await this.verifyRefreshToken(refreshTokenDto.refreshToken);
+    const user = await this.userModel.findById(payload.sub).exec();
+
+    if (!user?.refreshTokenHash || !user.refreshTokenExpiresAt) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (user.refreshTokenExpiresAt.getTime() <= Date.now()) {
+      await this.clearRefreshSession(user);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const isRefreshTokenValid = await bcrypt.compare(
+      refreshTokenDto.refreshToken,
+      user.refreshTokenHash,
+    );
+
+    if (!isRefreshTokenValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return this.createAuthResponse(user);
+  }
+
+  async logout(logoutDto: LogoutDto): Promise<LogoutResponse> {
+    try {
+      const payload = await this.verifyRefreshToken(logoutDto.refreshToken);
+      const user = await this.userModel.findById(payload.sub).exec();
+
+      if (user) {
+        await this.clearRefreshSession(user);
+      }
+    } catch {
+      return { success: true };
+    }
+
+    return { success: true };
+  }
+
   toAuthUser(user: UserDocument): AuthUserResponse {
     return {
       id: user.id,
@@ -112,10 +162,67 @@ export class AuthService {
       sub: user.id,
       email: user.email,
     };
+    const refreshSecret = resolveJwtRefreshSecret(
+      this.configService.get<string>('JWT_REFRESH_SECRET'),
+    );
+    const refreshExpiresIn = resolveJwtRefreshExpiresIn(
+      this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
+    );
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, {
+        secret: refreshSecret,
+        expiresIn: refreshExpiresIn,
+      }),
+    ]);
+
+    const refreshPayload = await this.jwtService.verifyAsync<JwtPayloadWithExpiry>(
+      refreshToken,
+      {
+        secret: refreshSecret,
+      },
+    );
+
+    user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    user.refreshTokenExpiresAt = this.resolveTokenExpiry(refreshPayload);
+    await user.save();
 
     return {
-      accessToken: await this.jwtService.signAsync(payload),
+      accessToken,
+      refreshToken,
       user: this.toAuthUser(user),
     };
+  }
+
+  private async verifyRefreshToken(
+    refreshToken: string,
+  ): Promise<JwtPayloadWithExpiry> {
+    try {
+      return await this.jwtService.verifyAsync<JwtPayloadWithExpiry>(
+        refreshToken,
+        {
+          secret: resolveJwtRefreshSecret(
+            this.configService.get<string>('JWT_REFRESH_SECRET'),
+          ),
+        },
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  private resolveTokenExpiry(payload: JwtPayloadWithExpiry): Date {
+    if (!payload.exp) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return new Date(payload.exp * 1000);
+  }
+
+  private async clearRefreshSession(user: UserDocument): Promise<void> {
+    user.refreshTokenHash = undefined;
+    user.refreshTokenExpiresAt = undefined;
+    await user.save();
   }
 }

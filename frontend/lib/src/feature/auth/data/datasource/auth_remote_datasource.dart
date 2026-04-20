@@ -5,6 +5,8 @@ import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.d
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/google_login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/login_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/logout_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 
@@ -26,7 +28,10 @@ class AuthRemoteDatasource {
 
       return _parseSession(response.data);
     } on DioException catch (error) {
-      throw AuthException(_extractErrorMessage(error));
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
     }
   }
 
@@ -40,7 +45,10 @@ class AuthRemoteDatasource {
 
       return _parseSession(response.data);
     } on DioException catch (error) {
-      throw AuthException(_extractErrorMessage(error));
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
     }
   }
 
@@ -53,7 +61,42 @@ class AuthRemoteDatasource {
 
       return AuthUser.fromJson(response.data ?? const {});
     } on DioException catch (error) {
-      throw AuthException(_extractErrorMessage(error));
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<AuthSession> refreshSession({required String refreshToken}) async {
+    try {
+      final request = RefreshTokenRequest(refreshToken: refreshToken);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: request.toJson(),
+      );
+
+      return _parseSession(response.data);
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<void> logout({required String refreshToken}) async {
+    try {
+      final request = LogoutRequest(refreshToken: refreshToken);
+      await _dio.post<Map<String, dynamic>>(
+        '/auth/logout',
+        data: request.toJson(),
+      );
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
     }
   }
 
@@ -63,12 +106,13 @@ class AuthRemoteDatasource {
     }
 
     final response = AuthSuccessResponse.fromJson(data);
-    if (response.accessToken.isEmpty) {
+    if (response.accessToken.isEmpty || response.refreshToken.isEmpty) {
       throw const AuthException('Invalid server response.');
     }
 
     return AuthSession(
       accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
       user: response.user,
     );
   }
@@ -99,5 +143,5 @@ class AuthRemoteDatasource {
 }
 
 final authRemoteDatasourceProvider = Provider<AuthRemoteDatasource>((ref) {
-  return AuthRemoteDatasource(ref.watch(dioProvider));
+  return AuthRemoteDatasource(ref.watch(authRawDioProvider));
 });
