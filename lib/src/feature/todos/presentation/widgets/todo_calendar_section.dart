@@ -7,6 +7,9 @@ import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_empty
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_presentation_utils.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_tile.dart';
 
+Key _calendarDayLabelKey(DateTime day) =>
+    ValueKey('calendar-day-label-${day.year}-${day.month}-${day.day}');
+
 class TodoCalendarSection extends StatelessWidget {
   const TodoCalendarSection({
     super.key,
@@ -238,6 +241,7 @@ class _CalendarGrid extends StatelessWidget {
 
                 final dateKey = dateOnly(day);
                 final isSelected = dateKey == dateOnly(selectedDate);
+                final isToday = dateKey == dateOnly(DateTime.now());
                 final todos = todosByDay[dateKey] ?? const <Todo>[];
                 final dateTag = dateTagsByDay[dateKey];
                 final hasDateTag = dateTag != null;
@@ -264,11 +268,16 @@ class _CalendarGrid extends StatelessWidget {
                     : (dateTagColor ??
                           cs.outlineVariant.withValues(alpha: 0.5));
                 final plainDayTextStyle = theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: isToday ? FontWeight.w800 : FontWeight.w700,
+                  color: isToday && !isSelected ? cs.primary : null,
                 );
                 final taggedDayTextStyle = theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? (dateTagColor ?? cs.primary) : null,
+                  fontWeight: isToday ? FontWeight.w800 : FontWeight.w700,
+                  color: isSelected
+                      ? (dateTagColor ?? cs.primary)
+                      : isToday
+                      ? cs.primary
+                      : null,
                 );
                 final tagTextStyle = theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -334,6 +343,7 @@ class _PlainCalendarDayCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AutoSizeText(
+          key: _calendarDayLabelKey(day),
           '${day.day}',
           style: dateTextStyle,
           maxLines: 1,
@@ -376,6 +386,7 @@ class _TaggedCalendarDayCell extends StatelessWidget {
                 _TaskDots(accentColors: accentColors),
               const Spacer(),
               Text(
+                key: _calendarDayLabelKey(day),
                 '${day.day}',
                 style: dateTextStyle,
                 maxLines: 1,

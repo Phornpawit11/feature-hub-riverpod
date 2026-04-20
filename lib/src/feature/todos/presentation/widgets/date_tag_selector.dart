@@ -9,11 +9,13 @@ class DateTagSelector extends StatelessWidget {
     required this.tags,
     required this.onTagSelected,
     required this.onTagEdit,
+    this.enabled = true,
   });
 
   final List<DateTag> tags;
-  final ValueChanged<DateTag> onTagSelected;
+  final Future<void> Function(DateTag tag) onTagSelected;
   final ValueChanged<DateTag> onTagEdit;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -38,19 +40,32 @@ class DateTagSelector extends StatelessWidget {
       );
     }
 
-    return Column(
-      children: tags
-          .map(
-            (tag) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: DateTagListItem(
-                tag: tag,
-                onSelect: () => onTagSelected(tag),
-                onManage: () => onTagEdit(tag),
-              ),
-            ),
-          )
-          .toList(),
+    const spacing = 10.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - (spacing * 3)) / 4;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 2),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: tags
+                .map(
+                  (tag) => SizedBox(
+                    width: itemWidth,
+                    child: DateTagListItem(
+                      tag: tag,
+                      onSelect: enabled ? () => onTagSelected(tag) : null,
+                      onManage: enabled ? () => onTagEdit(tag) : null,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      },
     );
   }
 }
@@ -76,6 +91,7 @@ class DateTagColorSelector extends StatelessWidget {
       children: availableColors.map((colorValue) {
         final isSelected = colorValue == selectedColorValue;
         final color = parseTodoColor(colorValue) ?? cs.primary;
+        final foregroundColor = foregroundColorForBackground(color);
 
         return InkWell(
           borderRadius: BorderRadius.circular(999),
@@ -90,16 +106,12 @@ class DateTagColorSelector extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? cs.onSurface.withValues(alpha: 0.3)
-                    : cs.outlineVariant,
-                width: isSelected ? 3 : 1.2,
+                    : Colors.transparent,
+                width: isSelected ? 2 : 1.2,
               ),
             ),
             child: isSelected
-                ? Icon(
-                    Icons.check_rounded,
-                    color: Colors.white.withValues(alpha: 0.92),
-                    size: 18,
-                  )
+                ? Icon(Icons.check_rounded, color: foregroundColor, size: 18)
                 : null,
           ),
         );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_riverpod/src/core/widgets/app_drawer.dart';
+import 'package:todos_riverpod/src/feature/todos/domain/date_tag.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
@@ -90,6 +91,45 @@ class TodoScreen extends HookConsumerWidget {
       viewMode.value = _TodoViewMode.calendar;
     }
 
+    void advanceSelectedCalendarDate() {
+      final nextDate = dateOnly(
+        selectedCalendarDate.value.add(const Duration(days: 1)),
+      );
+      selectedCalendarDate.value = nextDate;
+      focusedMonth.value = DateTime(nextDate.year, nextDate.month);
+    }
+
+    DateTime? findNextTaggedDateInFocusedMonth({
+      required DateTime currentDate,
+      required DateTime month,
+      required Map<DateTime, DateTag> assignedTagByDate,
+    }) {
+      final monthCandidates = assignedTagByDate.keys
+          .map(dateOnly)
+          .where(
+            (date) =>
+                date.year == month.year &&
+                date.month == month.month &&
+                date != currentDate,
+          )
+          .toList()
+        ..sort();
+
+      for (final candidate in monthCandidates.reversed) {
+        if (candidate.isBefore(currentDate)) {
+          return candidate;
+        }
+      }
+
+      for (final candidate in monthCandidates) {
+        if (candidate.isAfter(currentDate)) {
+          return candidate;
+        }
+      }
+
+      return null;
+    }
+
     Future<void> deleteTodo(String todoId) async {
       await ref.read(todoUsecaseProvider.notifier).deleteTodo(todoId);
 
@@ -113,27 +153,20 @@ class TodoScreen extends HookConsumerWidget {
         builder: (sheetContext) {
           return AddDateTagSheet(
             tags: tagState.tags,
+            selectedDateListenable: selectedCalendarDate,
+            initialAssignedTag: tagState
+                .assignedTagByDate[dateOnly(selectedCalendarDate.value)],
             onSelectTag: (tag) async {
+              final currentDate = selectedCalendarDate.value;
               await ref
                   .read(dateTagUsecaseProvider.notifier)
-                  .assignTagToDate(selectedCalendarDate.value, tag.id);
-
-              if (sheetContext.mounted) {
-                Navigator.of(sheetContext).pop();
-              }
+                  .assignTagToDate(currentDate, tag.id);
+              advanceSelectedCalendarDate();
             },
             onCreateTag: (name, colorValue) async {
               await ref
                   .read(dateTagUsecaseProvider.notifier)
-                  .createTagAndAssignToDate(
-                    date: selectedCalendarDate.value,
-                    name: name,
-                    colorValue: colorValue,
-                  );
-
-              if (sheetContext.mounted) {
-                Navigator.of(sheetContext).pop();
-              }
+                  .createTag(name: name, colorValue: colorValue);
             },
             onUpdateTag: (tag) {
               return ref.read(dateTagUsecaseProvider.notifier).updateTag(tag);
@@ -149,9 +182,26 @@ class TodoScreen extends HookConsumerWidget {
     }
 
     Future<void> removeDateTag() async {
+      final currentDate = selectedCalendarDate.value;
+      final currentMonth = focusedMonth.value;
+      final tagState =
+          ref.read(dateTagUsecaseProvider).asData?.value ??
+          dateTagAsync.asData?.value;
+      final nextFocusDate = tagState == null
+          ? null
+          : findNextTaggedDateInFocusedMonth(
+              currentDate: currentDate,
+              month: currentMonth,
+              assignedTagByDate: tagState.assignedTagByDate,
+            );
+
       await ref
           .read(dateTagUsecaseProvider.notifier)
-          .removeTagFromDate(selectedCalendarDate.value);
+          .removeTagFromDate(currentDate);
+
+      if (nextFocusDate != null) {
+        selectedCalendarDate.value = nextFocusDate;
+      }
     }
 
     return Scaffold(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_editor_fields.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/widgets/todo_presentation_utils.dart';
 
 void main() {
   group('TodoEditorFields', () {
@@ -31,6 +32,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selectedPriority, TodoPriority.high);
+    });
+
+    testWidgets('renders the expanded balanced color palette', (tester) async {
+      await tester.pumpWidget(_buildSubject());
+
+      expect(todoColors, hasLength(13));
+      expect(find.byIcon(Icons.block_rounded), findsOneWidget);
+      expect(find.byType(InkWell), findsWidgets);
     });
   });
 }

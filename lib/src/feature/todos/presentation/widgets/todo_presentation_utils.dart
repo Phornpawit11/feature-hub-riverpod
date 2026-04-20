@@ -20,6 +20,12 @@ const List<String?> todoColors = <String?>[
   'FFEF5350',
   'FFAB47BC',
   'FF8D6E63',
+  'FF3F51B5',
+  'FF00ACC1',
+  'FF7CB342',
+  'FFF4511E',
+  'FFD81B60',
+  'FF546E7A',
 ];
 
 DateTime dateOnly(DateTime date) => normalizeDate(date);
@@ -94,4 +100,10 @@ Color? parseTodoColor(String? value) {
   final parsed = int.tryParse(value, radix: 16);
   if (parsed == null) return null;
   return Color(parsed);
+}
+
+Color foregroundColorForBackground(Color backgroundColor) {
+  return backgroundColor.computeLuminance() > 0.5
+      ? Colors.black.withValues(alpha: 0.78)
+      : Colors.white.withValues(alpha: 0.94);
 }

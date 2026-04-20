@@ -199,6 +199,7 @@ class _ColorSelector extends StatelessWidget {
             final color = colorValue == null
                 ? cs.surfaceContainerHigh
                 : parseTodoColor(colorValue) ?? cs.surfaceContainerHigh;
+            final foregroundColor = foregroundColorForBackground(color);
 
             return InkWell(
               borderRadius: BorderRadius.circular(999),
@@ -226,7 +227,7 @@ class _ColorSelector extends StatelessWidget {
                     : isSelected
                     ? Icon(
                         Icons.check_rounded,
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: foregroundColor,
                         size: 18,
                       )
                     : null,

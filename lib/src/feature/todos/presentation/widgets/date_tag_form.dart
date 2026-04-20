@@ -15,6 +15,7 @@ class DateTagForm extends HookWidget {
     this.initialTag,
     this.onDelete,
     this.description,
+    this.resetAfterSubmit = false,
   });
 
   final String title;
@@ -24,6 +25,7 @@ class DateTagForm extends HookWidget {
   final Future<void> Function()? onDelete;
   final DateTag? initialTag;
   final String? description;
+  final bool resetAfterSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +36,7 @@ class DateTagForm extends HookWidget {
     final selectedColorValue = useState<String>(
       initialTag?.colorValue ?? todoColors.whereType<String>().first,
     );
+    final defaultColorValue = todoColors.whereType<String>().first;
     final nameError = useState<String?>(null);
     final isSubmitting = useState(false);
 
@@ -58,6 +61,11 @@ class DateTagForm extends HookWidget {
       isSubmitting.value = true;
       await onSubmit(trimmedName, selectedColorValue.value);
       if (context.mounted) {
+        if (resetAfterSubmit && initialTag == null) {
+          nameController.clear();
+          selectedColorValue.value = defaultColorValue;
+          nameError.value = null;
+        }
         isSubmitting.value = false;
       }
     }
