@@ -33,7 +33,7 @@ final class DateTagUsecaseProvider
   DateTagUsecase create() => DateTagUsecase();
 }
 
-String _$dateTagUsecaseHash() => r'dba7ec6cf748af467ec505efedb05a676cab25f8';
+String _$dateTagUsecaseHash() => r'2f029017645961ecbe876dc5727415a029930b85';
 
 abstract class _$DateTagUsecase extends $AsyncNotifier<DateTagState> {
   FutureOr<DateTagState> build();
