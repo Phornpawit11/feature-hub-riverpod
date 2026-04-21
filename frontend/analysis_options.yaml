@@ -1,0 +1,18 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    invalid_use_of_protected_member: error
+    must_be_immutable: error
+    avoid_print: warning
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    unnecessary_lambdas: true
+    always_declare_return_types: true
+    avoid_empty_else: true
+    avoid_redundant_argument_values: true
+    unawaited_futures: true
+    cancel_subscriptions: true

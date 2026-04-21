@@ -7,19 +7,22 @@
         {
             "name": "todos_riverpod",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "program": "frontend/lib/main.dart"
         },
         {
             "name": "todos_riverpod (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "program": "frontend/lib/main.dart"
         },
         {
             "name": "todos_riverpod (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "program": "frontend/lib/main.dart"
         }
     ]
 }
