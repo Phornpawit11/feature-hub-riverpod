@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/login.screen.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
 
@@ -11,7 +11,7 @@ void main() {
     testWidgets('shows validation errors and blocks empty submit', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(
         _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
@@ -28,7 +28,7 @@ void main() {
     testWidgets('submits trimmed email and password', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(
         _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
@@ -50,7 +50,7 @@ void main() {
     testWidgets('renders top-level auth error message', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         const AuthState(
           status: AuthStatus.failure,
           errorMessage: 'Invalid email or password',
@@ -67,7 +67,7 @@ void main() {
     testWidgets('shows loading indicator and disables sign in button', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         const AuthState(status: AuthStatus.authenticating),
       );
 
@@ -86,7 +86,7 @@ void main() {
     testWidgets('hides google button when provider says unsupported', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(
         _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
@@ -98,20 +98,20 @@ void main() {
 }
 
 Widget _buildTestApp({
-  required _FakeAuthNotifier fakeNotifier,
+  required _FakeAuthUsecase fakeNotifier,
   required bool showGoogleButton,
 }) {
   return ProviderScope(
     overrides: [
-      authNotifierProvider.overrideWith(() => fakeNotifier),
+      authUsecaseProvider.overrideWith(() => fakeNotifier),
       isMobileGoogleSignInSupportedProvider.overrideWithValue(showGoogleButton),
     ],
     child: const MaterialApp(home: LoginScreen()),
   );
 }
 
-class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier(this._initialState);
+class _FakeAuthUsecase extends AuthUsecase {
+  _FakeAuthUsecase(this._initialState);
 
   final AuthState _initialState;
   int emailSignInCallCount = 0;

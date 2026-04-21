@@ -6,11 +6,11 @@ import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart
 import 'package:todos_riverpod/src/feature/auth/data/providers/auth_repository_provider.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 void main() {
-  group('AuthNotifier', () {
+  group('AuthUsecase', () {
     late _FakeAuthRepository fakeRepository;
     late _FakeSecureTokenStorage fakeStorage;
     late ProviderContainer container;
@@ -38,12 +38,12 @@ void main() {
         fakeStorage.storedAccessToken = 'saved-access-token';
         fakeRepository.currentUser = _testUser();
 
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await Future<void>.delayed(Duration.zero);
         fakeRepository.lastCurrentUserToken = null;
         await notifier.restoreSession();
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(fakeRepository.lastCurrentUserToken, 'saved-access-token');
         expect(state.status, AuthStatus.authenticated);
@@ -67,10 +67,10 @@ void main() {
         );
         fakeRepository.userByToken['new-access-token'] = _testUser();
 
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await notifier.restoreSession();
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(fakeRepository.lastRefreshToken, 'refresh-token');
         expect(fakeStorage.storedAccessToken, 'new-access-token');
@@ -93,10 +93,10 @@ void main() {
           statusCode: 401,
         );
 
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await notifier.restoreSession();
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(state.status, AuthStatus.unauthenticated);
         expect(fakeStorage.storedAccessToken, isNull);
@@ -114,14 +114,14 @@ void main() {
           user: _testUser(),
         );
 
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await Future<void>.delayed(Duration.zero);
         await notifier.signInWithEmailPassword(
           email: ' test@example.com ',
           password: 'password123',
         );
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(fakeRepository.lastEmail, 'test@example.com');
         expect(fakeRepository.lastPassword, 'password123');
@@ -139,14 +139,14 @@ void main() {
           'Invalid email or password',
         );
 
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await Future<void>.delayed(Duration.zero);
         await notifier.signInWithEmailPassword(
           email: 'test@example.com',
           password: 'wrong-password',
         );
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(state.status, AuthStatus.failure);
         expect(state.errorMessage, 'Invalid email or password');
@@ -161,13 +161,13 @@ void main() {
         fakeStorage.storedAccessToken = 'jwt-token';
         fakeStorage.storedRefreshToken = 'refresh-token';
         fakeRepository.currentUser = _testUser();
-        final notifier = container.read(authNotifierProvider.notifier);
+        final notifier = container.read(authUsecaseProvider.notifier);
         await Future<void>.delayed(Duration.zero);
         fakeStorage.clearTokensCallCount = 0;
 
         await notifier.signOut();
 
-        final state = container.read(authNotifierProvider);
+        final state = container.read(authUsecaseProvider);
 
         expect(fakeRepository.lastLogoutRefreshToken, 'refresh-token');
         expect(fakeStorage.clearTokensCallCount, 1);

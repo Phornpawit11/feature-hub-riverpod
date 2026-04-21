@@ -1,13 +1,16 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
 import 'package:todos_riverpod/src/feature/auth/data/providers/auth_repository_provider.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
-class AuthNotifier extends Notifier<AuthState> {
+part 'auth_usecase.g.dart';
+
+@Riverpod(keepAlive: true)
+class AuthUsecase extends _$AuthUsecase {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
   SecureTokenStorage get _storage => ref.read(secureTokenStorageProvider);
 
@@ -185,7 +188,3 @@ class AuthNotifier extends Notifier<AuthState> {
     state = AuthState.unauthenticated;
   }
 }
-
-final authNotifierProvider = NotifierProvider<AuthNotifier, AuthState>(
-  AuthNotifier.new,
-);

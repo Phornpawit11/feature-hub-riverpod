@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/core/network/api_client_provider.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 void main() {
@@ -18,7 +18,7 @@ void main() {
         storedAccessToken: 'stale-access-token',
         storedRefreshToken: 'refresh-token',
       );
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _user()),
       );
       final protectedAdapter = _ProtectedResourceAdapter();
@@ -30,7 +30,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           secureTokenStorageProvider.overrideWithValue(storage),
-          authNotifierProvider.overrideWith(() => fakeNotifier),
+          authUsecaseProvider.overrideWith(() => fakeNotifier),
           authRawDioProvider.overrideWithValue(rawDio),
         ],
       );
@@ -54,7 +54,7 @@ void main() {
         storedAccessToken: 'stale-access-token',
         storedRefreshToken: 'refresh-token',
       );
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _user()),
       );
       final protectedAdapter = _ProtectedResourceAdapter();
@@ -68,7 +68,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           secureTokenStorageProvider.overrideWithValue(storage),
-          authNotifierProvider.overrideWith(() => fakeNotifier),
+          authUsecaseProvider.overrideWith(() => fakeNotifier),
           authRawDioProvider.overrideWithValue(rawDio),
         ],
       );
@@ -210,8 +210,8 @@ class _FakeSecureTokenStorage extends SecureTokenStorage {
   }
 }
 
-class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier(this._initialState);
+class _FakeAuthUsecase extends AuthUsecase {
+  _FakeAuthUsecase(this._initialState);
 
   final AuthState _initialState;
 

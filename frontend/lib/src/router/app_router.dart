@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/login.screen.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo.screen.dart';
 
@@ -16,7 +16,7 @@ enum SGRoute {
 }
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
+  final authState = ref.watch(authUsecaseProvider);
 
   return GoRouter(
     initialLocation: SGRoute.login.route,

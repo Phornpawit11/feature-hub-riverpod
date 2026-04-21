@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todos_riverpod/src/core/widgets/app_drawer.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 void main() {
@@ -11,7 +11,7 @@ void main() {
     testWidgets('renders authenticated profile data', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _testUser()),
       );
 
@@ -27,7 +27,7 @@ void main() {
     testWidgets('falls back gracefully when avatarUrl is null', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _testUser()),
       );
 
@@ -40,7 +40,7 @@ void main() {
     testWidgets('hides logout for unauthenticated state', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(AuthState.unauthenticated);
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(_buildDrawerHost(fakeNotifier));
       await _openDrawer(tester);
@@ -52,7 +52,7 @@ void main() {
     testWidgets('opens logout confirmation bottom sheet', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _testUser()),
       );
 
@@ -74,7 +74,7 @@ void main() {
     testWidgets('confirming logout signs out and hides logout afterwards', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _testUser()),
       );
 
@@ -99,7 +99,7 @@ void main() {
     testWidgets('canceling logout does not sign out', (
       WidgetTester tester,
     ) async {
-      final fakeNotifier = _FakeAuthNotifier(
+      final fakeNotifier = _FakeAuthUsecase(
         AuthState(status: AuthStatus.authenticated, user: _testUser()),
       );
 
@@ -118,9 +118,9 @@ void main() {
   });
 }
 
-Widget _buildDrawerHost(_FakeAuthNotifier fakeNotifier) {
+Widget _buildDrawerHost(_FakeAuthUsecase fakeNotifier) {
   return ProviderScope(
-    overrides: [authNotifierProvider.overrideWith(() => fakeNotifier)],
+    overrides: [authUsecaseProvider.overrideWith(() => fakeNotifier)],
     child: MaterialApp(
       home: Scaffold(
         body: Builder(
@@ -167,8 +167,8 @@ AuthUser _testUser() {
   );
 }
 
-class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier(this._initialState);
+class _FakeAuthUsecase extends AuthUsecase {
+  _FakeAuthUsecase(this._initialState);
 
   final AuthState _initialState;
   int signOutCallCount = 0;

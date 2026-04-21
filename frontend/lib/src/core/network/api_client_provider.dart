@@ -8,7 +8,7 @@ import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.d
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 
 final apiBaseUrlProvider = Provider<String>((ref) {
   const override = String.fromEnvironment('API_BASE_URL');
@@ -79,7 +79,7 @@ class AuthSessionCoordinator {
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
       );
-      ref.read(authNotifierProvider.notifier).setAuthenticatedSession(session);
+      ref.read(authUsecaseProvider.notifier).setAuthenticatedSession(session);
 
       return session.accessToken;
     } on DioException catch (error) {
@@ -96,7 +96,7 @@ class AuthSessionCoordinator {
 
   Future<void> expireSession() async {
     await _storage.clearTokens();
-    ref.read(authNotifierProvider.notifier).expireSession();
+    ref.read(authUsecaseProvider.notifier).expireSession();
   }
 
   AuthSession _parseSession(Map<String, dynamic>? data) {

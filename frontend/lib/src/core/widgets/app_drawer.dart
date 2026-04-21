@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todos_riverpod/src/core/settings/app_preferences.dart';
 import 'package:todos_riverpod/src/core/settings/app_preferences_state.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -14,7 +14,7 @@ class AppDrawer extends ConsumerWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final preferences = ref.watch(appPreferencesProvider);
-    final authState = ref.watch(authNotifierProvider);
+    final authState = ref.watch(authUsecaseProvider);
 
     return Drawer(
       child: SafeArea(
@@ -92,7 +92,7 @@ class AppDrawer extends ConsumerWidget {
                       Navigator.of(context).pop();
                     }
 
-                    await ref.read(authNotifierProvider.notifier).signOut();
+                    await ref.read(authUsecaseProvider.notifier).signOut();
                   },
                 ),
               ),

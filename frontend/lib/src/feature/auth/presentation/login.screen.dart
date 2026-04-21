@@ -4,7 +4,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_riverpod/src/core/widgets/app_text_field.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_notifier.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 class LoginScreen extends HookConsumerWidget {
@@ -14,7 +14,7 @@ class LoginScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final authState = ref.watch(authNotifierProvider);
+    final authState = ref.watch(authUsecaseProvider);
     final emailController = useTextEditingController();
     final passwordController = useTextEditingController();
     final emailFocusNode = useFocusNode();
@@ -28,7 +28,7 @@ class LoginScreen extends HookConsumerWidget {
     void clearErrors() {
       emailError.value = null;
       passwordError.value = null;
-      ref.read(authNotifierProvider.notifier).clearError();
+      ref.read(authUsecaseProvider.notifier).clearError();
     }
 
     Future<void> submit() async {
@@ -53,7 +53,7 @@ class LoginScreen extends HookConsumerWidget {
       }
 
       await ref
-          .read(authNotifierProvider.notifier)
+          .read(authUsecaseProvider.notifier)
           .signInWithEmailPassword(email: email, password: password);
     }
 
@@ -152,7 +152,7 @@ class LoginScreen extends HookConsumerWidget {
                                 onChanged: (_) {
                                   emailError.value = null;
                                   ref
-                                      .read(authNotifierProvider.notifier)
+                                      .read(authUsecaseProvider.notifier)
                                       .clearError();
                                 },
                                 onSubmitted: (_) {
@@ -187,7 +187,7 @@ class LoginScreen extends HookConsumerWidget {
                                 onChanged: (_) {
                                   passwordError.value = null;
                                   ref
-                                      .read(authNotifierProvider.notifier)
+                                      .read(authUsecaseProvider.notifier)
                                       .clearError();
                                 },
                                 onSubmitted: (_) => submit(),
@@ -247,7 +247,7 @@ class LoginScreen extends HookConsumerWidget {
                                       : () {
                                           ref
                                               .read(
-                                                authNotifierProvider.notifier,
+                                                authUsecaseProvider.notifier,
                                               )
                                               .signInWithGoogle();
                                         },
