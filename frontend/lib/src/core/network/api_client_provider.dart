@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
@@ -12,17 +13,7 @@ import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 
 final apiBaseUrlProvider = Provider<String>((ref) {
-  const override = String.fromEnvironment('API_BASE_URL');
-  if (override.isNotEmpty) {
-    return override;
-  }
-
-  final platform = defaultTargetPlatform;
-  if (!kIsWeb && platform == TargetPlatform.android) {
-    return 'http://10.0.2.2:3000/api';
-  }
-
-  return 'http://localhost:3000/api';
+  return ref.watch(appEnvProvider).apiBaseUrl;
 });
 
 BaseOptions _buildBaseOptions(String baseUrl) {
@@ -197,12 +188,6 @@ final dioProvider = Provider<Dio>((ref) {
   );
   dio.interceptors.add(
     PrettyDioLogger(
-      request: true,
-      requestHeader: false,
-      requestBody: false,
-      responseHeader: false,
-      error: true,
-      compact: true,
       logPrint: (message) => debugPrint(message.toString()),
     ),
   );

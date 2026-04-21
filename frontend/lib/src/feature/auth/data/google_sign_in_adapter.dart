@@ -1,12 +1,53 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 
+class GoogleSignInConfiguration {
+  const GoogleSignInConfiguration({this.clientId, this.serverClientId});
+
+  final String? clientId;
+  final String? serverClientId;
+}
+
+@visibleForTesting
+GoogleSignInConfiguration resolveGoogleSignInConfiguration(
+  AppEnv env, {
+  TargetPlatform? platform,
+  bool isWeb = kIsWeb,
+}) {
+  final resolvedPlatform = platform ?? defaultTargetPlatform;
+
+  if (isWeb) {
+    return GoogleSignInConfiguration(
+      clientId: env.googleClientId,
+      serverClientId: env.googleServerClientId,
+    );
+  }
+
+  return switch (resolvedPlatform) {
+    // Android requires the server/web client id for backend-auth flows.
+    // Passing a mobile client id here can trigger configuration errors.
+    TargetPlatform.android => GoogleSignInConfiguration(
+      serverClientId: env.googleServerClientId,
+    ),
+    TargetPlatform.iOS => GoogleSignInConfiguration(
+      clientId: env.googleClientId,
+      serverClientId: env.googleServerClientId,
+    ),
+    _ => GoogleSignInConfiguration(
+      clientId: env.googleClientId,
+      serverClientId: env.googleServerClientId,
+    ),
+  };
+}
+
 class GoogleSignInAdapter {
-  GoogleSignInAdapter(this._googleSignIn);
+  GoogleSignInAdapter(this._googleSignIn, this._env);
 
   final GoogleSignIn _googleSignIn;
+  final AppEnv _env;
   bool _isInitialized = false;
 
   Future<void> _ensureInitialized() async {
@@ -14,12 +55,27 @@ class GoogleSignInAdapter {
       return;
     }
 
-    const clientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
-    const serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+    final config = resolveGoogleSignInConfiguration(_env);
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (config.serverClientId == null) {
+        throw const AuthException(
+          'Missing GOOGLE_SERVER_CLIENT_ID for Android Google sign-in.',
+        );
+      }
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      if (config.clientId == null) {
+        throw const AuthException(
+          'Missing GOOGLE_CLIENT_ID for iOS Google sign-in.',
+        );
+      }
+    }
 
     await _googleSignIn.initialize(
-      clientId: clientId.isEmpty ? null : clientId,
-      serverClientId: serverClientId.isEmpty ? null : serverClientId,
+      clientId: config.clientId,
+      serverClientId: config.serverClientId,
     );
     _isInitialized = true;
   }
@@ -61,7 +117,10 @@ final googleSignInProvider = Provider<GoogleSignIn>((ref) {
 });
 
 final googleSignInAdapterProvider = Provider<GoogleSignInAdapter>((ref) {
-  return GoogleSignInAdapter(ref.watch(googleSignInProvider));
+  return GoogleSignInAdapter(
+    ref.watch(googleSignInProvider),
+    ref.watch(appEnvProvider),
+  );
 });
 
 final isMobileGoogleSignInSupportedProvider = Provider<bool>((ref) {

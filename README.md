@@ -214,20 +214,19 @@ cd frontend
 flutter pub get
 ```
 
-Run the app:
+Create `frontend/.env` from `frontend/.env.example`, then run the app:
 
 ```bash
 cd frontend
 flutter run
 ```
 
-Optional Dart defines:
+Frontend runtime env:
 
-```bash
-flutter run \
-  --dart-define=API_BASE_URL=http://localhost:3000/api \
-  --dart-define=GOOGLE_CLIENT_ID=your_google_client_id \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=your_google_server_client_id
+```env
+API_BASE_URL=http://localhost:3000/api
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_SERVER_CLIENT_ID=your_google_server_client_id
 ```
 
 Notes:

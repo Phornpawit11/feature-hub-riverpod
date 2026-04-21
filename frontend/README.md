@@ -83,6 +83,24 @@ flutter pub get
 flutter run
 ```
 
+### Frontend Env
+
+Create `frontend/.env` from `frontend/.env.example`.
+
+Supported keys:
+
+```env
+API_BASE_URL=http://localhost:3000/api
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_SERVER_CLIENT_ID=your_google_server_client_id
+```
+
+Fallback behavior:
+
+- `API_BASE_URL` falls back to `http://10.0.2.2:3000/api` on Android emulator
+- `API_BASE_URL` falls back to `http://localhost:3000/api` on other platforms
+- Google client IDs are optional; missing values are passed as `null`
+
 ## Code Generation
 
 This project uses generated files for Riverpod, Freezed, JSON serialization, and Hive.

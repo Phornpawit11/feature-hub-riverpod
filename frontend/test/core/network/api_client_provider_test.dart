@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/core/network/api_client_provider.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
@@ -29,6 +30,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          appEnvProvider.overrideWithValue(
+            const AppEnv(apiBaseUrl: 'http://localhost:3000/api'),
+          ),
           secureTokenStorageProvider.overrideWithValue(storage),
           authUsecaseProvider.overrideWith(() => fakeNotifier),
           authRawDioProvider.overrideWithValue(rawDio),
@@ -67,6 +71,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          appEnvProvider.overrideWithValue(
+            const AppEnv(apiBaseUrl: 'http://localhost:3000/api'),
+          ),
           secureTokenStorageProvider.overrideWithValue(storage),
           authUsecaseProvider.overrideWith(() => fakeNotifier),
           authRawDioProvider.overrideWithValue(rawDio),
