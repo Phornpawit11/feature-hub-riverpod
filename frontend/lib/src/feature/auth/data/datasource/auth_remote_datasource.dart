@@ -3,9 +3,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/network/api_client_provider.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/check_email_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/check_email_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/google_login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/logout_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/register_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
@@ -16,6 +19,50 @@ class AuthRemoteDatasource {
   AuthRemoteDatasource(this._dio);
 
   final Dio _dio;
+
+  Future<bool> checkEmailAvailability({required String email}) async {
+    try {
+      final request = CheckEmailRequest(email: email);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/check-email',
+        data: request.toJson(),
+      );
+
+      return CheckEmailResponse.fromJson(response.data ?? const {}).available;
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    } on FormatException {
+      throw const AuthException('Invalid server response.');
+    }
+  }
+
+  Future<AuthSession> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final request = RegisterRequest(
+        displayName: displayName,
+        email: email,
+        password: password,
+      );
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/register',
+        data: request.toJson(),
+      );
+
+      return _parseSession(response.data);
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
 
   Future<AuthSession> signInWithEmailPassword({
     required String email,

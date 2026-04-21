@@ -102,7 +102,8 @@ void main() {
         expect(
           fakeRepository.lastCurrentUserToken,
           'expired-access-token',
-          reason: 'getCurrentUser called only for initial token check, not after refresh',
+          reason:
+              'getCurrentUser called only for initial token check, not after refresh',
         );
       },
     );
@@ -130,6 +131,84 @@ void main() {
         expect(fakeStorage.storedAccessToken, isNull);
         expect(fakeStorage.storedRefreshToken, isNull);
         expect(fakeStorage.clearTokensCallCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'checkEmailAvailability trims email without changing auth state or tokens',
+      () async {
+        fakeRepository.checkEmailAvailabilityResult = true;
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        final beforeState = container.read(authUsecaseProvider);
+
+        final result = await notifier.checkEmailAvailability(
+          email: ' test@example.com ',
+        );
+
+        final afterState = container.read(authUsecaseProvider);
+
+        expect(result, isTrue);
+        expect(fakeRepository.lastCheckedEmail, 'test@example.com');
+        expect(afterState.status, beforeState.status);
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+      },
+    );
+
+    test(
+      'registerWithEmailPassword stores tokens and authenticates on success',
+      () async {
+        fakeRepository.registerSession = AuthSession(
+          accessToken: 'register-token',
+          refreshToken: 'register-refresh-token',
+          user: _testUser(),
+        );
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        await notifier.registerWithEmailPassword(
+          displayName: ' Test User ',
+          email: ' test@example.com ',
+          password: 'password123',
+        );
+
+        final state = container.read(authUsecaseProvider);
+
+        expect(fakeRepository.lastDisplayName, 'Test User');
+        expect(fakeRepository.lastEmail, 'test@example.com');
+        expect(fakeRepository.lastPassword, 'password123');
+        expect(fakeStorage.storedAccessToken, 'register-token');
+        expect(fakeStorage.storedRefreshToken, 'register-refresh-token');
+        expect(state.status, AuthStatus.authenticated);
+      },
+    );
+
+    test(
+      'registerWithEmailPassword exposes backend error on failure',
+      () async {
+        fakeRepository.registerError = const AuthException(
+          'An account with this email already exists. Please sign in.',
+        );
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        await notifier.registerWithEmailPassword(
+          displayName: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        final state = container.read(authUsecaseProvider);
+
+        expect(state.status, AuthStatus.failure);
+        expect(
+          state.errorMessage,
+          'An account with this email already exists. Please sign in.',
+        );
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
       },
     );
 
@@ -240,6 +319,10 @@ AuthUser _testUser() {
 }
 
 class _FakeAuthRepository implements AuthRepository {
+  bool checkEmailAvailabilityResult = true;
+  AuthException? checkEmailAvailabilityError;
+  AuthSession? registerSession;
+  AuthException? registerError;
   AuthSession? emailSession;
   AuthException? emailError;
   AuthSession? googleSession;
@@ -250,7 +333,9 @@ class _FakeAuthRepository implements AuthRepository {
   AuthException? currentUserError;
   final Map<String, AuthUser> userByToken = {};
   String? lastEmail;
+  String? lastCheckedEmail;
   String? lastPassword;
+  String? lastDisplayName;
   String? lastCurrentUserToken;
   String? lastRefreshToken;
   String? lastLogoutRefreshToken;
@@ -271,8 +356,41 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<bool> checkEmailAvailability({required String email}) async {
+    lastCheckedEmail = email;
+
+    if (checkEmailAvailabilityError != null) {
+      throw checkEmailAvailabilityError!;
+    }
+
+    return checkEmailAvailabilityResult;
+  }
+
+  @override
   Future<void> logout({required String refreshToken}) async {
     lastLogoutRefreshToken = refreshToken;
+  }
+
+  @override
+  Future<AuthSession> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    lastDisplayName = displayName;
+    lastEmail = email;
+    lastPassword = password;
+
+    if (registerError != null) {
+      throw registerError!;
+    }
+
+    return registerSession ??
+        AuthSession(
+          accessToken: 'register-token',
+          refreshToken: 'register-refresh-token',
+          user: _testUser(),
+        );
   }
 
   @override

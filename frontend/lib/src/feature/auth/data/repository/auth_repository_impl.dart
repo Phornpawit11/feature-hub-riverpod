@@ -21,6 +21,11 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   }
 
   @override
+  Future<bool> checkEmailAvailability({required String email}) {
+    return _remoteDatasource.checkEmailAvailability(email: email);
+  }
+
+  @override
   Future<AuthUser> getCurrentUser(String accessToken) {
     return _remoteDatasource.getCurrentUser(accessToken);
   }
@@ -33,6 +38,19 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   @override
   Future<void> logout({required String refreshToken}) {
     return _remoteDatasource.logout(refreshToken: refreshToken);
+  }
+
+  @override
+  Future<AuthSession> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) {
+    return _remoteDatasource.registerWithEmailPassword(
+      displayName: displayName,
+      email: email,
+      password: password,
+    );
   }
 
   @override

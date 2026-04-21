@@ -1,4 +1,7 @@
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   beforeEach,
   describe,
@@ -10,7 +13,9 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../../src/modules/auth/auth.service';
+import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
+import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -53,6 +58,117 @@ describe('AuthService', () => {
       userModel as never,
       jwtService as JwtService,
       configService as ConfigService,
+    );
+  });
+
+  it('returns available true when email is unused', async () => {
+    const checkEmailDto: CheckEmailDto = {
+      email: ' Test@Example.com ',
+    };
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null as never),
+    });
+
+    await expect(service.checkEmailAvailability(checkEmailDto)).resolves.toEqual(
+      {
+        available: true,
+      },
+    );
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    });
+  });
+
+  it('returns available false when email already exists', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+      } as never),
+    });
+
+    await expect(
+      service.checkEmailAvailability({ email: 'test@example.com' }),
+    ).resolves.toEqual({
+      available: false,
+    });
+  });
+
+  it('registers a password user and returns an authenticated session', async () => {
+    const registerDto: RegisterDto = {
+      displayName: ' Test User ',
+      email: ' Test@Example.com ',
+      password: 'password123',
+    };
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      avatarUrl: null,
+      provider: 'password',
+      passwordHash: 'hashed-password',
+      save: jest.fn(),
+    };
+
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null as never),
+    });
+    userModel.create.mockResolvedValue(user as never);
+    mockedBcrypt.hash
+      .mockResolvedValueOnce('hashed-password' as never)
+      .mockResolvedValueOnce('hashed-refresh-token' as never);
+    jwtService.signAsync = jest
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('jwt-token' as never)
+      .mockResolvedValueOnce('refresh-token' as never);
+    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({
+      sid: 'session-1',
+      exp: 2_000_000_000,
+    } as never);
+
+    await expect(service.register(registerDto)).resolves.toEqual({
+      accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        avatarUrl: null,
+        provider: 'password',
+      },
+    });
+
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    });
+    expect(mockedBcrypt.hash).toHaveBeenNthCalledWith(1, 'password123', 10);
+    expect(userModel.create).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      displayName: 'Test User',
+      passwordHash: 'hashed-password',
+      provider: 'password',
+    });
+    expect(user.save).toHaveBeenCalled();
+  });
+
+  it('rejects register when email already exists', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+      } as never),
+    });
+
+    await expect(
+      service.register({
+        displayName: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      }),
+    ).rejects.toThrow(
+      new ConflictException(
+        'An account with this email already exists. Please sign in.',
+      ),
     );
   });
 

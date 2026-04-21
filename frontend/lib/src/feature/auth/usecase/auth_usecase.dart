@@ -123,6 +123,41 @@ class AuthUsecase extends _$AuthUsecase {
     }
   }
 
+  Future<bool> checkEmailAvailability({required String email}) {
+    return _repository.checkEmailAvailability(email: email.trim());
+  }
+
+  Future<void> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+
+    try {
+      final session = await _repository.registerWithEmailPassword(
+        displayName: displayName.trim(),
+        email: email.trim(),
+        password: password,
+      );
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+      setAuthenticatedSession(session);
+    } on AuthException catch (error) {
+      state = AuthState(
+        status: AuthStatus.failure,
+        errorMessage: error.message,
+      );
+    } catch (_) {
+      state = const AuthState(
+        status: AuthStatus.failure,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+    }
+  }
+
   Future<void> signInWithGoogle() async {
     if (!ref.read(isMobileGoogleSignInSupportedProvider)) {
       state = const AuthState(

@@ -7,13 +7,17 @@ import {
 } from '@jest/globals';
 import { AuthController } from '../../src/modules/auth/auth.controller';
 import { AuthService } from '../../src/modules/auth/auth.service';
+import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
+import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
 import { GoogleLoginDto } from '../../src/modules/auth/dto/google-login.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
 
 describe('AuthController', () => {
   const authService = {
+    checkEmailAvailability: jest.fn(),
+    register: jest.fn(),
     login: jest.fn(),
     loginWithGoogle: jest.fn(),
     refresh: jest.fn(),
@@ -25,6 +29,47 @@ describe('AuthController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new AuthController(authService);
+  });
+
+  it('delegates check email to auth service', async () => {
+    const checkEmailDto: CheckEmailDto = {
+      email: 'test@example.com',
+    };
+
+    authService.checkEmailAvailability.mockResolvedValue({
+      available: true,
+    } as never);
+
+    await expect(controller.checkEmailAvailability(checkEmailDto)).resolves.toEqual({
+      available: true,
+    });
+    expect(authService.checkEmailAvailability).toHaveBeenCalledWith(
+      checkEmailDto,
+    );
+  });
+
+  it('delegates register to auth service', async () => {
+    const registerDto: RegisterDto = {
+      displayName: 'Test User',
+      email: 'test@example.com',
+      password: 'password123',
+    };
+    const response = {
+      accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        provider: 'password',
+        avatarUrl: null,
+      },
+    };
+
+    authService.register.mockResolvedValue(response as never);
+
+    await expect(controller.register(registerDto)).resolves.toEqual(response);
+    expect(authService.register).toHaveBeenCalledWith(registerDto);
   });
 
   it('delegates login to auth service', async () => {

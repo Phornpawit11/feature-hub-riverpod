@@ -1,5 +1,6 @@
 import { InjectModel } from '@nestjs/mongoose';
 import {
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import {
+  CheckEmailAvailabilityResponse,
   AuthSuccessResponse,
   AuthUserResponse,
   JwtPayload,
@@ -17,7 +19,9 @@ import {
   LogoutResponse,
 } from './auth-user.types';
 import { User, UserDocument } from './user.schema';
+import { CheckEmailDto } from './dto/check-email.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
@@ -36,8 +40,39 @@ export class AuthService {
     this.authConfig = resolveAuthConfig(configService);
   }
 
+  async checkEmailAvailability(
+    checkEmailDto: CheckEmailDto,
+  ): Promise<CheckEmailAvailabilityResponse> {
+    const email = this.normalizeEmail(checkEmailDto.email);
+    const existingUser = await this.userModel.findOne({ email }).exec();
+
+    return { available: !existingUser };
+  }
+
+  async register(registerDto: RegisterDto): Promise<AuthSuccessResponse> {
+    const email = this.normalizeEmail(registerDto.email);
+    const displayName = registerDto.displayName.trim();
+    const existingUser = await this.userModel.findOne({ email }).exec();
+
+    if (existingUser) {
+      throw new ConflictException(
+        'An account with this email already exists. Please sign in.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(registerDto.password, 10);
+    const user = await this.userModel.create({
+      email,
+      displayName,
+      passwordHash,
+      provider: 'password',
+    });
+
+    return this.createAuthResponse(user);
+  }
+
   async login(loginDto: LoginDto): Promise<AuthSuccessResponse> {
-    const email = loginDto.email.trim().toLowerCase();
+    const email = this.normalizeEmail(loginDto.email);
     const user = await this.userModel.findOne({ email }).exec();
 
     if (!user?.passwordHash) {
@@ -54,6 +89,10 @@ export class AuthService {
     }
 
     return this.createAuthResponse(user);
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   async loginWithGoogle(

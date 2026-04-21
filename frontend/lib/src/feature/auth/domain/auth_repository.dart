@@ -4,6 +4,14 @@ import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 part 'auth_repository.freezed.dart';
 
 abstract class AuthRepository {
+  Future<bool> checkEmailAvailability({required String email});
+
+  Future<AuthSession> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  });
+
   Future<AuthSession> signInWithEmailPassword({
     required String email,
     required String password,
