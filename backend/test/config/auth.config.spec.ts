@@ -8,7 +8,7 @@ import {
   defaultJwtAccessSecret,
   defaultJwtRefreshSecret,
   resolveAuthConfig,
-} from './auth.config';
+} from '../../src/config/auth.config';
 
 describe('resolveAuthConfig', () => {
   it('falls back to legacy JWT_SECRET during migration', () => {

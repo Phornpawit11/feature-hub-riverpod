@@ -11,12 +11,12 @@ import {
   it,
   jest,
 } from '@jest/globals';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { User } from './user.schema';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { LogoutDto } from './dto/logout.dto';
+import { AuthController } from '../../src/modules/auth/auth.controller';
+import { AuthService } from '../../src/modules/auth/auth.service';
+import { User } from '../../src/modules/auth/user.schema';
+import { LoginDto } from '../../src/modules/auth/dto/login.dto';
+import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
+import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
