@@ -1,13 +1,13 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
 import 'package:todos_riverpod/src/feature/auth/data/providers/auth_repository_provider.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
-import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
+import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 
 void main() {
   group('AuthUsecase', () {
@@ -65,7 +65,6 @@ void main() {
           refreshToken: 'new-refresh-token',
           user: _testUser(),
         );
-        fakeRepository.userByToken['new-access-token'] = _testUser();
 
         final notifier = container.read(authUsecaseProvider.notifier);
         await notifier.restoreSession();
@@ -76,6 +75,35 @@ void main() {
         expect(fakeStorage.storedAccessToken, 'new-access-token');
         expect(fakeStorage.storedRefreshToken, 'new-refresh-token');
         expect(state.status, AuthStatus.authenticated);
+      },
+    );
+
+    test(
+      'restoreSession does NOT call getCurrentUser after successful refresh',
+      () async {
+        fakeStorage.storedAccessToken = 'expired-access-token';
+        fakeStorage.storedRefreshToken = 'refresh-token';
+        fakeRepository.currentUserError = const AuthException(
+          'Invalid token',
+          statusCode: 401,
+        );
+        fakeRepository.refreshSessionResult = AuthSession(
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+          user: _testUser(),
+        );
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        fakeRepository.lastCurrentUserToken = null;
+        await notifier.restoreSession();
+
+        // getCurrentUser ควรถูกเรียกแค่ครั้งเดียว (ตอน access token เดิมยังไม่หมดอายุ)
+        // และหลัง refresh ต้องไม่เรียกซ้ำ
+        expect(
+          fakeRepository.lastCurrentUserToken,
+          'expired-access-token',
+          reason: 'getCurrentUser called only for initial token check, not after refresh',
+        );
       },
     );
 
@@ -169,11 +197,34 @@ void main() {
 
         final state = container.read(authUsecaseProvider);
 
+        // Google signOut ถูก wrap ด้วย try-catch — MissingPluginException ใน test env
+        // จะถูก catch แล้ว signOut ยังทำงานต่อได้ปกติ
         expect(fakeRepository.lastLogoutRefreshToken, 'refresh-token');
         expect(fakeStorage.clearTokensCallCount, 1);
         expect(state.status, AuthStatus.unauthenticated);
         expect(fakeStorage.storedAccessToken, isNull);
         expect(fakeStorage.storedRefreshToken, isNull);
+      },
+    );
+
+    test(
+      'signOut succeeds even when Google signOut fails (best-effort)',
+      () async {
+        // Google signOut wrap ด้วย try-catch ดังนั้นแม้ platform ไม่พร้อมก็ไม่ crash
+        final notifier = container.read(authUsecaseProvider.notifier);
+
+        // Let the initial restoreSession microtask drain before resetting state
+        await Future<void>.delayed(Duration.zero);
+
+        fakeStorage.storedAccessToken = 'token';
+        fakeStorage.storedRefreshToken = 'refresh';
+        fakeStorage.clearTokensCallCount = 0;
+
+        await expectLater(notifier.signOut(), completes);
+
+        final state = container.read(authUsecaseProvider);
+        expect(state.status, AuthStatus.unauthenticated);
+        expect(fakeStorage.clearTokensCallCount, 1);
       },
     );
   });

@@ -94,6 +94,101 @@ void main() {
 
       expect(find.text('Continue with Google'), findsNothing);
     });
+
+    testWidgets('rejects email with only @ symbol', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      await tester.enterText(find.byType(TextField).at(0), '@');
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+      expect(fakeNotifier.emailSignInCallCount, 0);
+    });
+
+    testWidgets('rejects email without domain', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      await tester.enterText(find.byType(TextField).at(0), 'user@');
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+      expect(fakeNotifier.emailSignInCallCount, 0);
+    });
+
+    testWidgets('rejects email without local part', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      await tester.enterText(find.byType(TextField).at(0), '@domain.com');
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+      expect(fakeNotifier.emailSignInCallCount, 0);
+    });
+
+    testWidgets('rejects plain text without @ symbol', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      await tester.enterText(find.byType(TextField).at(0), 'notanemail');
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+      expect(fakeNotifier.emailSignInCallCount, 0);
+    });
+
+    testWidgets('accepts valid email format and calls signIn', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      await tester.enterText(
+        find.byType(TextField).at(0),
+        'user@example.com',
+      );
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
+      expect(find.text('Enter a valid email address.'), findsNothing);
+      expect(fakeNotifier.emailSignInCallCount, 1);
+    });
+
+    testWidgets('clears email error when user starts typing', (tester) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
+      );
+
+      // trigger error first
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+
+      // start typing — error should clear
+      await tester.enterText(find.byType(TextField).at(0), 'u');
+      await tester.pump();
+      expect(find.text('Enter a valid email address.'), findsNothing);
+    });
   });
 }
 

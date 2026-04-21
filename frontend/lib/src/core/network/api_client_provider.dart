@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_success_response.dart';
@@ -194,7 +195,17 @@ final dioProvider = Provider<Dio>((ref) {
       },
     ),
   );
-
+  dio.interceptors.add(
+    PrettyDioLogger(
+      request: true,
+      requestHeader: false,
+      requestBody: false,
+      responseHeader: false,
+      error: true,
+      compact: true,
+      logPrint: (message) => debugPrint(message.toString()),
+    ),
+  );
   return dio;
 });
 

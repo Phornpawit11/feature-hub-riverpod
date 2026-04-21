@@ -24,6 +24,15 @@ class GoogleSignInAdapter {
     _isInitialized = true;
   }
 
+  Future<void> signOut() async {
+    if (!_isInitialized) return;
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {
+      // best-effort — ไม่ throw เพื่อไม่ให้ขัด logout flow หลัก
+    }
+  }
+
   Future<String> getIdToken() async {
     await _ensureInitialized();
 

@@ -13,5 +13,5 @@ Future<void> bootstrap() async {
   await setPreferredOrientations();
   await HiveInitializer.init();
 
-  runApp(ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: MyApp()));
 }

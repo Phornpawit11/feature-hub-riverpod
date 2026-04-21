@@ -1,3 +1,4 @@
+import 'package:email_validator/email_validator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -38,7 +39,7 @@ class LoginScreen extends HookConsumerWidget {
       final password = passwordController.text;
       var hasError = false;
 
-      if (email.isEmpty || !email.contains('@')) {
+      if (email.isEmpty || !EmailValidator.validate(email)) {
         emailError.value = 'Enter a valid email address.';
         hasError = true;
       }
@@ -268,9 +269,9 @@ class LoginScreen extends HookConsumerWidget {
                                 spacing: 8,
                                 runSpacing: 2,
                                 children: [
-                                  TextButton(
+                                  const TextButton(
                                     onPressed: null,
-                                    child: const Text('Forgot password?'),
+                                    child: Text('Forgot password?'),
                                   ),
                                   Text(
                                     kIsWeb ? 'Web login only' : 'Mobile ready',
@@ -278,9 +279,9 @@ class LoginScreen extends HookConsumerWidget {
                                       color: cs.onSurfaceVariant,
                                     ),
                                   ),
-                                  TextButton(
+                                  const TextButton(
                                     onPressed: null,
-                                    child: const Text(
+                                    child: Text(
                                       "Don't have an account? Sign up",
                                     ),
                                   ),

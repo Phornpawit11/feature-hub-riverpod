@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
@@ -75,8 +76,8 @@ class AuthUsecase extends _$AuthUsecase {
         refreshToken: session.refreshToken,
       );
 
-      final user = await _repository.getCurrentUser(session.accessToken);
-      state = AuthState(status: AuthStatus.authenticated, user: user);
+      // ใช้ user จาก session โดยตรง — ไม่ต้องเรียก getCurrentUser ซ้ำ
+      state = AuthState(status: AuthStatus.authenticated, user: session.user);
     } on AuthException catch (error) {
       if (error.statusCode == null) {
         state = AuthState(
@@ -156,6 +157,11 @@ class AuthUsecase extends _$AuthUsecase {
   }
 
   Future<void> signOut() async {
+    // Revoke Google session (best-effort — ไม่ block logout ถ้า Google ล้มเหลว)
+    try {
+      await ref.read(googleSignInAdapterProvider).signOut();
+    } catch (_) {}
+
     final refreshToken = await _storage.readRefreshToken();
 
     if (refreshToken != null && refreshToken.isNotEmpty) {
