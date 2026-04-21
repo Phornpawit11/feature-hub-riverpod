@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 import { User } from './user.schema';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -28,6 +29,7 @@ describe('AuthController (e2e)', () => {
   const userModel = {
     findOne: jest.fn(),
     findById: jest.fn(),
+    updateOne: jest.fn(),
   };
 
   const jwtService = {
@@ -44,6 +46,15 @@ describe('AuthController (e2e)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    configService.get.mockImplementation((key: string) =>
+      (
+        {
+          NODE_ENV: 'test',
+          JWT_ACCESS_EXPIRES_IN: '15m',
+          JWT_REFRESH_EXPIRES_IN: '30d',
+        } as Record<string, string>
+      )[key],
+    );
 
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
@@ -81,6 +92,7 @@ describe('AuthController (e2e)', () => {
         displayName: 'Test User',
         avatarUrl: null,
         provider: 'password',
+        refreshSessionId: 'session-1',
         save: jest.fn(),
       })),
     });
@@ -89,7 +101,10 @@ describe('AuthController (e2e)', () => {
     jwtService.signAsync
       .mockResolvedValueOnce('jwt-token' as never)
       .mockResolvedValueOnce('refresh-token' as never);
-    jwtService.verifyAsync.mockResolvedValue({ exp: 2_000_000_000 } as never);
+    jwtService.verifyAsync.mockResolvedValue({
+      sid: 'session-1',
+      exp: 2_000_000_000,
+    } as never);
 
     const loginDto = (await validationPipe.transform(
       {
@@ -187,5 +202,19 @@ describe('AuthController (e2e)', () => {
     )) as RefreshTokenDto;
 
     expect(refreshDto).toEqual({ refreshToken: 'refresh-token' });
+  });
+
+  it('accepts valid logout payload shape', async () => {
+    const logoutDto = (await validationPipe.transform(
+      {
+        refreshToken: 'refresh-token',
+      },
+      {
+        type: 'body',
+        metatype: LogoutDto,
+      },
+    )) as LogoutDto;
+
+    expect(logoutDto).toEqual({ refreshToken: 'refresh-token' });
   });
 });

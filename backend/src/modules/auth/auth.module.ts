@@ -7,10 +7,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User, UserSchema } from './user.schema';
 import { JwtStrategy } from './jwt.strategy';
-import {
-  resolveJwtAccessExpiresIn,
-  resolveJwtAccessSecret,
-} from '../../config/auth.config';
+import { resolveAuthConfig } from '../../config/auth.config';
 
 @Module({
   imports: [
@@ -19,16 +16,16 @@ import {
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: resolveJwtAccessSecret(
-          configService.get<string>('JWT_ACCESS_SECRET'),
-        ),
-        signOptions: {
-          expiresIn: resolveJwtAccessExpiresIn(
-            configService.get<string>('JWT_ACCESS_EXPIRES_IN'),
-          ),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const authConfig = resolveAuthConfig(configService);
+
+        return {
+          secret: authConfig.accessSecret,
+          signOptions: {
+            expiresIn: authConfig.accessExpiresIn,
+          },
+        };
+      },
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],

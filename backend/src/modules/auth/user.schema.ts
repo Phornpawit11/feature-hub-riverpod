@@ -29,6 +29,9 @@ export class User {
 
   @Prop()
   refreshTokenExpiresAt?: Date;
+
+  @Prop()
+  refreshSessionId?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

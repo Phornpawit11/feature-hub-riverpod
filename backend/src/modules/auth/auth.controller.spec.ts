@@ -109,6 +109,18 @@ describe('AuthController', () => {
     expect(authService.logout).toHaveBeenCalledWith(logoutDto);
   });
 
+  it('surfaces logout auth failures from auth service', async () => {
+    const logoutDto: LogoutDto = {
+      refreshToken: 'expired-refresh-token',
+    };
+
+    authService.logout.mockRejectedValue(new Error('Invalid refresh token'));
+
+    await expect(controller.logout(logoutDto)).rejects.toThrow(
+      'Invalid refresh token',
+    );
+  });
+
   it('returns current user from request in me endpoint', () => {
     const user = {
       id: 'user-1',

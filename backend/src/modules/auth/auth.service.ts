@@ -7,12 +7,13 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import {
   AuthSuccessResponse,
   AuthUserResponse,
   JwtPayload,
-  JwtPayloadWithExpiry,
+  RefreshJwtPayload,
   LogoutResponse,
 } from './auth-user.types';
 import { User, UserDocument } from './user.schema';
@@ -20,20 +21,20 @@ import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
-import {
-  resolveJwtRefreshExpiresIn,
-  resolveJwtRefreshSecret,
-} from '../../config/auth.config';
+import { resolveAuthConfig } from '../../config/auth.config';
 
 @Injectable()
 export class AuthService {
   private readonly googleClient = new OAuth2Client();
+  private readonly authConfig: ReturnType<typeof resolveAuthConfig>;
 
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.authConfig = resolveAuthConfig(configService);
+  }
 
   async login(loginDto: LoginDto): Promise<AuthSuccessResponse> {
     const email = loginDto.email.trim().toLowerCase();
@@ -109,7 +110,15 @@ export class AuthService {
     const payload = await this.verifyRefreshToken(refreshTokenDto.refreshToken);
     const user = await this.userModel.findById(payload.sub).exec();
 
-    if (!user?.refreshTokenHash || !user.refreshTokenExpiresAt) {
+    if (
+      !user?.refreshTokenHash ||
+      !user.refreshTokenExpiresAt ||
+      !user.refreshSessionId
+    ) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (user.refreshSessionId != payload.sid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -127,19 +136,79 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    return this.createAuthResponse(user);
+    const nextSession = await this.createTokenPair(user);
+    const updateResult = await this.userModel.updateOne(
+      {
+        _id: user.id,
+        refreshSessionId: user.refreshSessionId,
+        refreshTokenHash: user.refreshTokenHash,
+      },
+      {
+        $set: {
+          refreshSessionId: nextSession.refreshSessionId,
+          refreshTokenHash: nextSession.refreshTokenHash,
+          refreshTokenExpiresAt: nextSession.refreshTokenExpiresAt,
+        },
+      },
+    );
+
+    if (updateResult.modifiedCount !== 1) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return {
+      accessToken: nextSession.accessToken,
+      refreshToken: nextSession.refreshToken,
+      user: this.toAuthUser(user),
+    };
   }
 
   async logout(logoutDto: LogoutDto): Promise<LogoutResponse> {
-    try {
-      const payload = await this.verifyRefreshToken(logoutDto.refreshToken);
-      const user = await this.userModel.findById(payload.sub).exec();
+    const payload = await this.verifyRefreshToken(logoutDto.refreshToken);
+    const user = await this.userModel.findById(payload.sub).exec();
 
-      if (user) {
-        await this.clearRefreshSession(user);
-      }
-    } catch {
-      return { success: true };
+    if (
+      !user?.refreshTokenHash ||
+      !user.refreshTokenExpiresAt ||
+      !user.refreshSessionId
+    ) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (user.refreshSessionId != payload.sid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (user.refreshTokenExpiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const isRefreshTokenValid = await bcrypt.compare(
+      logoutDto.refreshToken,
+      user.refreshTokenHash,
+    );
+
+    if (!isRefreshTokenValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const updateResult = await this.userModel.updateOne(
+      {
+        _id: user.id,
+        refreshSessionId: user.refreshSessionId,
+        refreshTokenHash: user.refreshTokenHash,
+      },
+      {
+        $unset: {
+          refreshSessionId: 1,
+          refreshTokenHash: 1,
+          refreshTokenExpiresAt: 1,
+        },
+      },
+    );
+
+    if (updateResult.modifiedCount !== 1) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     return { success: true };
@@ -158,53 +227,28 @@ export class AuthService {
   private async createAuthResponse(
     user: UserDocument,
   ): Promise<AuthSuccessResponse> {
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-    };
-    const refreshSecret = resolveJwtRefreshSecret(
-      this.configService.get<string>('JWT_REFRESH_SECRET'),
-    );
-    const refreshExpiresIn = resolveJwtRefreshExpiresIn(
-      this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
-    );
+    const session = await this.createTokenPair(user);
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload),
-      this.jwtService.signAsync(payload, {
-        secret: refreshSecret,
-        expiresIn: refreshExpiresIn,
-      }),
-    ]);
-
-    const refreshPayload = await this.jwtService.verifyAsync<JwtPayloadWithExpiry>(
-      refreshToken,
-      {
-        secret: refreshSecret,
-      },
-    );
-
-    user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    user.refreshTokenExpiresAt = this.resolveTokenExpiry(refreshPayload);
+    user.refreshSessionId = session.refreshSessionId;
+    user.refreshTokenHash = session.refreshTokenHash;
+    user.refreshTokenExpiresAt = session.refreshTokenExpiresAt;
     await user.save();
 
     return {
-      accessToken,
-      refreshToken,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       user: this.toAuthUser(user),
     };
   }
 
   private async verifyRefreshToken(
     refreshToken: string,
-  ): Promise<JwtPayloadWithExpiry> {
+  ): Promise<RefreshJwtPayload> {
     try {
-      return await this.jwtService.verifyAsync<JwtPayloadWithExpiry>(
+      return await this.jwtService.verifyAsync<RefreshJwtPayload>(
         refreshToken,
         {
-          secret: resolveJwtRefreshSecret(
-            this.configService.get<string>('JWT_REFRESH_SECRET'),
-          ),
+          secret: this.authConfig.refreshSecret,
         },
       );
     } catch {
@@ -212,7 +256,7 @@ export class AuthService {
     }
   }
 
-  private resolveTokenExpiry(payload: JwtPayloadWithExpiry): Date {
+  private resolveTokenExpiry(payload: RefreshJwtPayload): Date {
     if (!payload.exp) {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -220,7 +264,47 @@ export class AuthService {
     return new Date(payload.exp * 1000);
   }
 
+  private async createTokenPair(user: UserDocument): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    refreshSessionId: string;
+    refreshTokenHash: string;
+    refreshTokenExpiresAt: Date;
+  }> {
+    const accessPayload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+    };
+    const refreshSessionId = randomUUID();
+    const refreshPayload = {
+      ...accessPayload,
+      sid: refreshSessionId,
+    };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(accessPayload),
+      this.jwtService.signAsync(refreshPayload, {
+        secret: this.authConfig.refreshSecret,
+        expiresIn: this.authConfig.refreshExpiresIn,
+      }),
+    ]);
+
+    const verifiedRefreshPayload =
+      await this.jwtService.verifyAsync<RefreshJwtPayload>(refreshToken, {
+        secret: this.authConfig.refreshSecret,
+      });
+
+    return {
+      accessToken,
+      refreshToken,
+      refreshSessionId,
+      refreshTokenHash: await bcrypt.hash(refreshToken, 10),
+      refreshTokenExpiresAt: this.resolveTokenExpiry(verifiedRefreshPayload),
+    };
+  }
+
   private async clearRefreshSession(user: UserDocument): Promise<void> {
+    user.refreshSessionId = undefined;
     user.refreshTokenHash = undefined;
     user.refreshTokenExpiresAt = undefined;
     await user.save();

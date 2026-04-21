@@ -115,6 +115,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
   /api/todos:
     get:
       summary: Get all todos

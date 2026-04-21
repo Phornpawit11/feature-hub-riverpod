@@ -27,3 +27,7 @@ export interface JwtPayloadWithExpiry extends JwtPayload {
   exp?: number;
   iat?: number;
 }
+
+export interface RefreshJwtPayload extends JwtPayloadWithExpiry {
+  sid: string;
+}
