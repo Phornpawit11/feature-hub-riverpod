@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'app_env.g.dart';
 
 class AppEnv {
   const AppEnv({
@@ -50,10 +52,11 @@ class AppEnv {
   }
 }
 
-final appEnvProvider = Provider<AppEnv>((ref) {
+@Riverpod(keepAlive: true)
+AppEnv appEnv(Ref ref) {
   final envMap = dotenv.isInitialized ? dotenv.env : const <String, String>{};
   return AppEnv.fromMap(envMap);
-});
+}
 
 Future<void> loadAppEnv() async {
   await dotenv.load(isOptional: true);

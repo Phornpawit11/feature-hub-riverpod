@@ -34,7 +34,7 @@ final class TodoRepositoryImplProvider
 }
 
 String _$todoRepositoryImplHash() =>
-    r'723eb9f08d6176cb04978f1609b9725b03cc4fdd';
+    r'ed5ede1b442d20a3d2ec98445c6e26485afda3b1';
 
 abstract class _$TodoRepositoryImpl extends $AsyncNotifier<void> {
   FutureOr<void> build();

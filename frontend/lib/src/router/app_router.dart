@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/login.screen.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo.screen.dart';
+
+part 'app_router.g.dart';
 
 enum SGRoute {
   login,
@@ -23,7 +25,8 @@ class _AuthStateListenable extends ValueNotifier<AuthState> {
   void update(AuthState state) => value = state;
 }
 
-final goRouterProvider = Provider<GoRouter>((ref) {
+@Riverpod(keepAlive: true)
+GoRouter goRouter(Ref ref) {
   final listenable = _AuthStateListenable(ref.read(authUsecaseProvider));
 
   // อัปเดต listenable เมื่อ auth state เปลี่ยน — GoRouter จะ re-evaluate redirect
@@ -77,4 +80,4 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
   ref.onDispose(listenable.dispose);
   return router;
-});
+}

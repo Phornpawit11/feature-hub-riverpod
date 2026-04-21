@@ -33,7 +33,7 @@ final class TodoUsecaseProvider
   TodoUsecase create() => TodoUsecase();
 }
 
-String _$todoUsecaseHash() => r'fba1a1abd58d4ba095cd5e26c5e373e6eb1cd708';
+String _$todoUsecaseHash() => r'7953d251edcd095c608c5f74c83740ba10ce1785';
 
 abstract class _$TodoUsecase extends $AsyncNotifier<List<Todo>> {
   FutureOr<List<Todo>> build();

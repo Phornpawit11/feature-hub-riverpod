@@ -41,7 +41,7 @@ final class AuthUsecaseProvider
   }
 }
 
-String _$authUsecaseHash() => r'ca40963f0c585f1881a2892b72058989a9879472';
+String _$authUsecaseHash() => r'a2ab14080b5e7b23471bb70460e5c79f9865e159';
 
 abstract class _$AuthUsecase extends $Notifier<AuthState> {
   AuthState build();

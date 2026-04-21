@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/auth_error_response.dart';
@@ -12,9 +12,12 @@ import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 
-final apiBaseUrlProvider = Provider<String>((ref) {
+part 'api_client_provider.g.dart';
+
+@Riverpod(keepAlive: true)
+String apiBaseUrl(Ref ref) {
   return ref.watch(appEnvProvider).apiBaseUrl;
-});
+}
 
 BaseOptions _buildBaseOptions(String baseUrl) {
   return BaseOptions(
@@ -133,19 +136,22 @@ class AuthSessionCoordinator {
   }
 }
 
-final authRawDioProvider = Provider<Dio>((ref) {
+@Riverpod(keepAlive: true)
+Dio authRawDio(Ref ref) {
   return Dio(_buildBaseOptions(ref.watch(apiBaseUrlProvider)));
-});
+}
 
-final authSessionCoordinatorProvider = Provider<AuthSessionCoordinator>((ref) {
+@Riverpod(keepAlive: true)
+AuthSessionCoordinator authSessionCoordinator(Ref ref) {
   return AuthSessionCoordinator(
     ref,
     ref.watch(authRawDioProvider),
     ref.watch(secureTokenStorageProvider),
   );
-});
+}
 
-final dioProvider = Provider<Dio>((ref) {
+@Riverpod(keepAlive: true)
+Dio dio(Ref ref) {
   final dio = Dio(_buildBaseOptions(ref.watch(apiBaseUrlProvider)));
   final storage = ref.watch(secureTokenStorageProvider);
   final coordinator = ref.watch(authSessionCoordinatorProvider);
@@ -192,7 +198,7 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
   return dio;
-});
+}
 
 bool _shouldRefresh(DioException error) {
   final statusCode = error.response?.statusCode;

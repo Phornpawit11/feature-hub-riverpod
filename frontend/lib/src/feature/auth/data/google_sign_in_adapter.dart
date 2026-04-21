@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
+
+part 'google_sign_in_adapter.g.dart';
 
 class GoogleSignInConfiguration {
   const GoogleSignInConfiguration({this.clientId, this.serverClientId});
@@ -112,18 +114,21 @@ class GoogleSignInAdapter {
   }
 }
 
-final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+@Riverpod(keepAlive: true)
+GoogleSignIn googleSignIn(Ref ref) {
   return GoogleSignIn.instance;
-});
+}
 
-final googleSignInAdapterProvider = Provider<GoogleSignInAdapter>((ref) {
+@Riverpod(keepAlive: true)
+GoogleSignInAdapter googleSignInAdapter(Ref ref) {
   return GoogleSignInAdapter(
     ref.watch(googleSignInProvider),
     ref.watch(appEnvProvider),
   );
-});
+}
 
-final isMobileGoogleSignInSupportedProvider = Provider<bool>((ref) {
+@Riverpod(keepAlive: true)
+bool isMobileGoogleSignInSupported(Ref ref) {
   if (kIsWeb) {
     return false;
   }
@@ -132,4 +137,4 @@ final isMobileGoogleSignInSupportedProvider = Provider<bool>((ref) {
     TargetPlatform.android || TargetPlatform.iOS => true,
     _ => false,
   };
-});
+}

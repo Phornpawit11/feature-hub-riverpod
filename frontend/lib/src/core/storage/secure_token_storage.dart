@@ -1,5 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'secure_token_storage.g.dart';
 
 class SecureTokenStorage {
   SecureTokenStorage(this._storage);
@@ -47,10 +49,12 @@ class SecureTokenStorage {
   }
 }
 
-final flutterSecureStorageProvider = Provider<FlutterSecureStorage>((ref) {
+@Riverpod(keepAlive: true)
+FlutterSecureStorage flutterSecureStorage(Ref ref) {
   return const FlutterSecureStorage();
-});
+}
 
-final secureTokenStorageProvider = Provider<SecureTokenStorage>((ref) {
+@Riverpod(keepAlive: true)
+SecureTokenStorage secureTokenStorage(Ref ref) {
   return SecureTokenStorage(ref.watch(flutterSecureStorageProvider));
-});
+}
