@@ -8,6 +8,8 @@ import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
+enum _LoginAttempt { emailPassword, google }
+
 class LoginScreen extends HookConsumerWidget {
   const LoginScreen({super.key});
 
@@ -23,12 +25,19 @@ class LoginScreen extends HookConsumerWidget {
     final isPasswordVisible = useState(false);
     final emailError = useState<String?>(null);
     final passwordError = useState<String?>(null);
+    final lastLoginAttempt = useState<_LoginAttempt?>(null);
     final isSubmitting = authState.status == AuthStatus.authenticating;
     final showGoogleButton = ref.watch(isMobileGoogleSignInSupportedProvider);
+    final authErrorMessage = authState.errorMessage;
+    final isGoogleAttempt = lastLoginAttempt.value == _LoginAttempt.google;
+    final passwordFieldError =
+        passwordError.value ?? (isGoogleAttempt ? null : authErrorMessage);
+    final googleAuthError = isGoogleAttempt ? authErrorMessage : null;
 
     void clearErrors() {
       emailError.value = null;
       passwordError.value = null;
+      lastLoginAttempt.value = null;
       ref.read(authUsecaseProvider.notifier).clearError();
     }
 
@@ -53,6 +62,7 @@ class LoginScreen extends HookConsumerWidget {
         return;
       }
 
+      lastLoginAttempt.value = _LoginAttempt.emailPassword;
       await ref
           .read(authUsecaseProvider.notifier)
           .signInWithEmailPassword(email: email, password: password);
@@ -120,25 +130,7 @@ class LoginScreen extends HookConsumerWidget {
                                   color: cs.onSurfaceVariant,
                                 ),
                               ),
-                              if (authState.errorMessage != null) ...[
-                                const SizedBox(height: 20),
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: cs.errorContainer.withValues(
-                                      alpha: 0.85,
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Text(
-                                    authState.errorMessage!,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: cs.onErrorContainer,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
+
                               const SizedBox(height: 24),
                               AppTextField(
                                 controller: emailController,
@@ -152,6 +144,7 @@ class LoginScreen extends HookConsumerWidget {
                                 errorText: emailError.value,
                                 onChanged: (_) {
                                   emailError.value = null;
+                                  lastLoginAttempt.value = null;
                                   ref
                                       .read(authUsecaseProvider.notifier)
                                       .clearError();
@@ -170,7 +163,7 @@ class LoginScreen extends HookConsumerWidget {
                                 textInputAction: TextInputAction.done,
                                 autofillHints: const [AutofillHints.password],
                                 enabled: !isSubmitting,
-                                errorText: passwordError.value,
+                                errorText: passwordFieldError,
                                 suffixIcon: IconButton(
                                   tooltip: isPasswordVisible.value
                                       ? 'Hide password'
@@ -187,6 +180,7 @@ class LoginScreen extends HookConsumerWidget {
                                 ),
                                 onChanged: (_) {
                                   passwordError.value = null;
+                                  lastLoginAttempt.value = null;
                                   ref
                                       .read(authUsecaseProvider.notifier)
                                       .clearError();
@@ -246,6 +240,10 @@ class LoginScreen extends HookConsumerWidget {
                                   onPressed: isSubmitting
                                       ? null
                                       : () {
+                                          FocusScope.of(context).unfocus();
+                                          clearErrors();
+                                          lastLoginAttempt.value =
+                                              _LoginAttempt.google;
                                           ref
                                               .read(
                                                 authUsecaseProvider.notifier,
@@ -260,6 +258,17 @@ class LoginScreen extends HookConsumerWidget {
                                     ),
                                   ),
                                 ),
+                                if (googleAuthError != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    googleAuthError,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: cs.error,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ],
                               const SizedBox(height: 18),
                               Wrap(

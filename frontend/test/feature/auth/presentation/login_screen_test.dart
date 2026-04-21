@@ -47,21 +47,43 @@ void main() {
       expect(fakeNotifier.emailSignInCallCount, 1);
     });
 
-    testWidgets('renders top-level auth error message', (
+    testWidgets('renders auth error message under password field', (
       WidgetTester tester,
     ) async {
       final fakeNotifier = _FakeAuthUsecase(
-        const AuthState(
-          status: AuthStatus.failure,
-          errorMessage: 'Invalid email or password',
-        ),
+        AuthState.unauthenticated,
+        emailFailureMessage: 'Invalid email or password',
       );
 
       await tester.pumpWidget(
         _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
+      await tester.enterText(find.byType(TextField).at(0), 'user@example.com');
+      await tester.enterText(find.byType(TextField).at(1), 'password123');
+      await tester.tap(find.text('Sign in'));
+      await tester.pump();
+
       expect(find.text('Invalid email or password'), findsOneWidget);
+    });
+
+    testWidgets('shows google auth error below google button', (
+      WidgetTester tester,
+    ) async {
+      final fakeNotifier = _FakeAuthUsecase(
+        AuthState.unauthenticated,
+        googleFailureMessage: 'Google sign-in failed',
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: true),
+      );
+
+      await tester.tap(find.text('Continue with Google'));
+      await tester.pump();
+
+      expect(find.text('Google sign-in failed'), findsOneWidget);
+      expect(fakeNotifier.googleSignInCallCount, 1);
     });
 
     testWidgets('shows loading indicator and disables sign in button', (
@@ -161,10 +183,7 @@ void main() {
         _buildTestApp(fakeNotifier: fakeNotifier, showGoogleButton: false),
       );
 
-      await tester.enterText(
-        find.byType(TextField).at(0),
-        'user@example.com',
-      );
+      await tester.enterText(find.byType(TextField).at(0), 'user@example.com');
       await tester.enterText(find.byType(TextField).at(1), 'password123');
       await tester.tap(find.text('Sign in'));
       await tester.pump();
@@ -206,10 +225,17 @@ Widget _buildTestApp({
 }
 
 class _FakeAuthUsecase extends AuthUsecase {
-  _FakeAuthUsecase(this._initialState);
+  _FakeAuthUsecase(
+    this._initialState, {
+    this.emailFailureMessage,
+    this.googleFailureMessage,
+  });
 
   final AuthState _initialState;
+  final String? emailFailureMessage;
+  final String? googleFailureMessage;
   int emailSignInCallCount = 0;
+  int googleSignInCallCount = 0;
   String? lastEmail;
   String? lastPassword;
 
@@ -227,5 +253,24 @@ class _FakeAuthUsecase extends AuthUsecase {
     emailSignInCallCount++;
     lastEmail = email;
     lastPassword = password;
+
+    if (emailFailureMessage != null) {
+      state = AuthState(
+        status: AuthStatus.failure,
+        errorMessage: emailFailureMessage,
+      );
+    }
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    googleSignInCallCount++;
+
+    if (googleFailureMessage != null) {
+      state = AuthState(
+        status: AuthStatus.failure,
+        errorMessage: googleFailureMessage,
+      );
+    }
   }
 }
