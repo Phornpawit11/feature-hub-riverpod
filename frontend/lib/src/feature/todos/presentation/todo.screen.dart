@@ -31,6 +31,7 @@ class TodoScreen extends HookConsumerWidget {
     final selectedDueDate = useState<DateTime?>(null);
     final selectedColorValue = useState<String?>(null);
     final isComposerExpanded = useState(false);
+    final isSubmittingTodo = useState(false);
     final viewMode = useState(_TodoViewMode.calendar);
     final now = DateTime.now();
     final focusedMonth = useState<DateTime>(DateTime(now.year, now.month));
@@ -45,28 +46,33 @@ class TodoScreen extends HookConsumerWidget {
 
     Future<void> submitTodo() async {
       final title = textEditingController.text.trim();
-      if (title.isEmpty) return;
+      if (title.isEmpty || isSubmittingTodo.value) return;
 
-      await ref
-          .read(todoUsecaseProvider.notifier)
-          .addTodo(
-            title: title,
-            priority: selectedPriority.value,
-            dueDate: selectedDueDate.value,
-            colorValue: selectedColorValue.value,
+      isSubmittingTodo.value = true;
+      try {
+        await ref
+            .read(todoUsecaseProvider.notifier)
+            .addTodo(
+              title: title,
+              priority: selectedPriority.value,
+              dueDate: selectedDueDate.value,
+              colorValue: selectedColorValue.value,
+            );
+
+        resetComposer();
+        isComposerExpanded.value = false;
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task added'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
-
-      resetComposer();
-      isComposerExpanded.value = false;
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task added'),
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        }
+      } finally {
+        isSubmittingTodo.value = false;
       }
     }
 
@@ -78,9 +84,17 @@ class TodoScreen extends HookConsumerWidget {
     }
 
     void changeFocusedMonth(DateTime month) {
-      final normalizedMonth = DateTime(month.year, month.month);
-      focusedMonth.value = normalizedMonth;
-      selectedCalendarDate.value = normalizedMonth;
+      focusedMonth.value = DateTime(month.year, month.month);
+
+      final current = selectedCalendarDate.value;
+
+      // ถ้าอยู่เดือนเดิมแล้ว ไม่ต้องเปลี่ยน selected date
+      if (current.year == month.year && current.month == month.month) return;
+
+      // คง day เดิมไว้ถ้าทำได้ ถ้าไม่มีในเดือนนั้น (เช่น 31 ใน Feb) ใช้วันสุดท้าย
+      final lastDayOfMonth = DateTime(month.year, month.month + 1, 0).day;
+      final targetDay = current.day.clamp(1, lastDayOfMonth);
+      selectedCalendarDate.value = DateTime(month.year, month.month, targetDay);
     }
 
     void switchToListMode() {
@@ -132,6 +146,29 @@ class TodoScreen extends HookConsumerWidget {
     }
 
     Future<void> deleteTodo(String todoId) async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Delete task?'),
+          content: const Text('This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
       await ref.read(todoUsecaseProvider.notifier).deleteTodo(todoId);
 
       if (context.mounted) {
@@ -247,7 +284,7 @@ class TodoScreen extends HookConsumerWidget {
                       selectedDueDate.value = dueDate,
                   onColorChanged: (colorValue) =>
                       selectedColorValue.value = colorValue,
-                  onSubmit: submitTodo,
+                  onSubmit: isSubmittingTodo.value ? null : submitTodo,
                 ),
                 const SizedBox(height: 20),
                 todoListAsync.when(
@@ -293,18 +330,46 @@ class TodoScreen extends HookConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 40),
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (err, stack) => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Center(child: Text('Something went wrong')),
+                    error: (err, stack) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Something went wrong'),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () =>
+                                  ref.invalidate(dateTagUsecaseProvider),
+                              icon: const Icon(Icons.refresh_rounded),
+                              label: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (err, stack) => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Center(child: Text('Something went wrong')),
+                  error: (err, stack) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Something went wrong'),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                ref.invalidate(todoUsecaseProvider),
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -73,7 +73,7 @@ void main() {
 
     testWidgets('renders without due date and color metadata', (tester) async {
       await tester.pumpWidget(
-        _buildSubject(todo: _todo(dueDate: null, colorValue: null)),
+        _buildSubject(todo: _todo(colorValue: null)),
       );
 
       expect(find.text('Ship calendar redesign'), findsOneWidget);
@@ -118,7 +118,6 @@ Todo _todo({
     title: 'Ship calendar redesign',
     createdAt: DateTime(2026, 4, 10),
     isCompleted: isCompleted,
-    priority: TodoPriority.low,
     dueDate: dueDate ?? DateTime(2026, 4, 14),
     colorValue: colorValue,
   );

@@ -98,8 +98,8 @@ class TodoCalendarSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (selectedTodos.isEmpty)
-          Center(
-            child: const TodoEmptyState(
+          const Center(
+            child: TodoEmptyState(
               title: 'Nothing due on this day',
               subtitle:
                   'Try selecting another date, or add a due date to more tasks.',
@@ -379,7 +379,7 @@ class _TaggedCalendarDayCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsetsGeometry.symmetric(vertical: 2, horizontal: 4),
+          padding: const EdgeInsetsGeometry.symmetric(vertical: 2, horizontal: 4),
           child: Row(
             children: [
               if (accentColors.isNotEmpty)
@@ -400,7 +400,7 @@ class _TaggedCalendarDayCell extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 0, maxHeight: 24),
+              constraints: const BoxConstraints(maxHeight: 24),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 5),

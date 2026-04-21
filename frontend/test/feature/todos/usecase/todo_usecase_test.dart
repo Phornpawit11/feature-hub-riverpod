@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/feature/todos/data/providers/todo_repository_provider.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo_repository.dart';
@@ -16,9 +16,8 @@ void main() {
           Todo(
             id: '1',
             title: 'Write tests',
-            createdAt: DateTime(2026, 1, 1),
+            createdAt: DateTime(2026),
             isCompleted: false,
-            priority: TodoPriority.low,
             dueDate: DateTime(2026, 1, 3),
             colorValue: 'FF5B8DEF',
           ),
@@ -186,6 +185,114 @@ void main() {
       expect(todos.single.colorValue, 'FF5B8DEF');
     });
   });
+
+  group('error handling', () {
+    test('state becomes AsyncError when getTodos throws after addTodo', () async {
+      final fakeRepository = _FakeTodoRepository(todos: []);
+      final container = ProviderContainer(
+        overrides: [todoRepositoryProvider.overrideWithValue(fakeRepository)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(todoUsecaseProvider.future);
+
+      fakeRepository.throwOnNextGet = true;
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(title: 'Task A');
+
+      final state = container.read(todoUsecaseProvider);
+      expect(state.hasError, isTrue);
+    });
+
+    test('state becomes AsyncError when getTodos throws after toggleTodo', () async {
+      final fakeRepository = _FakeTodoRepository(
+        todos: [
+          Todo(
+            id: 'x',
+            title: 'T',
+            createdAt: DateTime(2026),
+            isCompleted: false,
+          ),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [todoRepositoryProvider.overrideWithValue(fakeRepository)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(todoUsecaseProvider.future);
+
+      fakeRepository.throwOnNextGet = true;
+      await container.read(todoUsecaseProvider.notifier).toggleTodo('x');
+
+      final state = container.read(todoUsecaseProvider);
+      expect(state.hasError, isTrue);
+    });
+
+    test('provider recovers after invalidate following an error', () async {
+      final fakeRepository = _FakeTodoRepository(todos: []);
+      final container = ProviderContainer(
+        overrides: [todoRepositoryProvider.overrideWithValue(fakeRepository)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(todoUsecaseProvider.future);
+
+      fakeRepository.throwOnNextGet = true;
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(title: 'Task B');
+      expect(container.read(todoUsecaseProvider).hasError, isTrue);
+
+      // invalidate → provider rebuild → getTodos ปกติ
+      container.invalidate(todoUsecaseProvider);
+      final todos = await container.read(todoUsecaseProvider.future);
+      expect(todos, isA<List<Todo>>());
+    });
+  });
+
+  group('UUID ID generation', () {
+    late _FakeTodoRepository fakeRepository;
+    late ProviderContainer container;
+
+    setUp(() {
+      fakeRepository = _FakeTodoRepository(todos: []);
+      container = ProviderContainer(
+        overrides: [todoRepositoryProvider.overrideWithValue(fakeRepository)],
+      );
+    });
+
+    tearDown(() => container.dispose());
+
+    test('generated IDs are unique across rapid successive adds', () async {
+      await container.read(todoUsecaseProvider.future);
+      await Future.wait([
+        container
+            .read(todoUsecaseProvider.notifier)
+            .addTodo(title: 'Task A'),
+        container
+            .read(todoUsecaseProvider.notifier)
+            .addTodo(title: 'Task B'),
+      ]);
+      final todos = await container.read(todoUsecaseProvider.future);
+      final ids = todos.map((t) => t.id).toList();
+      expect(ids.toSet().length, ids.length, reason: 'IDs must be unique');
+    });
+
+    test('generated ID matches UUID v4 format', () async {
+      await container.read(todoUsecaseProvider.future);
+      await container
+          .read(todoUsecaseProvider.notifier)
+          .addTodo(title: 'UUID test');
+      final todos = await container.read(todoUsecaseProvider.future);
+      final newId = todos.last.id;
+      final uuidV4 = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+      );
+      expect(uuidV4.hasMatch(newId), isTrue, reason: 'ID should be UUID v4');
+    });
+  });
 }
 
 class _FakeTodoRepository implements TodoRepository {
@@ -198,6 +305,7 @@ class _FakeTodoRepository implements TodoRepository {
   final List<String> toggledTodoIds = [];
   final List<String> deletedTodoIds = [];
   int getTodosCallCount = 0;
+  bool throwOnNextGet = false;
 
   @override
   Future<void> addTodo(Todo todo) async {
@@ -214,6 +322,10 @@ class _FakeTodoRepository implements TodoRepository {
   @override
   Future<List<Todo>> getTodos() async {
     getTodosCallCount++;
+    if (throwOnNextGet) {
+      throwOnNextGet = false;
+      throw Exception('Storage error');
+    }
     return List.unmodifiable(_todos);
   }
 

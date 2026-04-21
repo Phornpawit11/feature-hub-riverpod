@@ -373,7 +373,7 @@ void main() {
         DateTime(today.year, today.month + 1, 0),
       );
       final firstDayOfNextMonth = normalizeDate(
-        DateTime(today.year, today.month + 1, 1),
+        DateTime(today.year, today.month + 1),
       );
       final todoRepository = _FakeTodoRepository(
         todos: [
@@ -818,10 +818,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final lastDayOfNextMonth =
+          DateTime(nextMonth.year, nextMonth.month + 1, 0).day;
+      final expectedDay = today.day.clamp(1, lastDayOfNextMonth);
+
       expect(find.text(formatTodoMonth(nextMonth)), findsOneWidget);
       expect(
         find.text(
-          'Due on ${formatTodoDate(DateTime(nextMonth.year, nextMonth.month))}',
+          'Due on ${formatTodoDate(DateTime(nextMonth.year, nextMonth.month, expectedDay))}',
         ),
         findsOneWidget,
       );
@@ -865,10 +869,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final lastDayOfPrevMonth =
+          DateTime(previousMonth.year, previousMonth.month + 1, 0).day;
+      final expectedDay = today.day.clamp(1, lastDayOfPrevMonth);
+
       expect(find.text(formatTodoMonth(previousMonth)), findsOneWidget);
       expect(
         find.text(
-          'Due on ${formatTodoDate(DateTime(previousMonth.year, previousMonth.month))}',
+          'Due on ${formatTodoDate(DateTime(previousMonth.year, previousMonth.month, expectedDay))}',
         ),
         findsOneWidget,
       );

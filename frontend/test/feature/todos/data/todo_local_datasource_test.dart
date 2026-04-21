@@ -48,7 +48,7 @@ void main() {
         TodoHiveModel(
           id: 'older',
           title: 'Older',
-          createdAt: DateTime(2026, 1, 1),
+          createdAt: DateTime(2026),
           isCompleted: false,
         ),
       );
@@ -101,7 +101,7 @@ void main() {
         TodoHiveModel(
           id: '1',
           title: 'Disposable',
-          createdAt: DateTime(2026, 1, 1),
+          createdAt: DateTime(2026),
           isCompleted: false,
         ),
       );

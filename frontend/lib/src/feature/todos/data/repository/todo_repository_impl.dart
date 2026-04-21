@@ -10,7 +10,7 @@ part 'todo_repository_impl.g.dart';
 class TodoRepositoryImpl extends _$TodoRepositoryImpl
     implements TodoRepository {
   TodoLocalDatasource get _datasourceProvider =>
-      ref.watch(todoLocalDatasourceProvider.notifier);
+      ref.read(todoLocalDatasourceProvider.notifier);
 
   @override
   FutureOr<void> build() {

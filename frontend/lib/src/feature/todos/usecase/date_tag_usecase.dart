@@ -4,6 +4,7 @@ import 'package:todos_riverpod/src/feature/todos/data/providers/date_tag_reposit
 import 'package:todos_riverpod/src/feature/todos/domain/date_tag.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/date_tag_repository.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
+import 'package:uuid/uuid.dart';
 
 part 'date_tag_usecase.g.dart';
 
@@ -35,7 +36,7 @@ class DateTagUsecase extends _$DateTagUsecase {
 
     await _repository.createTag(
       DateTag(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: const Uuid().v4(),
         name: trimmedName,
         colorValue: colorValue,
       ),
@@ -58,7 +59,7 @@ class DateTagUsecase extends _$DateTagUsecase {
     if (duplicateExists) return;
 
     final tag = DateTag(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       name: trimmedName,
       colorValue: colorValue,
     );

@@ -18,7 +18,7 @@ void main() {
           TodoHiveModel(
             id: '1',
             title: 'Existing task',
-            createdAt: DateTime(2026, 1, 1),
+            createdAt: DateTime(2026),
             isCompleted: false,
             priorityKey: 'low',
             dueDate: DateTime(2026, 1, 3),
@@ -86,7 +86,7 @@ void main() {
 
       expect(updated, isNotNull);
       expect(updated!.title, 'Updated task');
-      expect(updated.createdAt, DateTime(2026, 1, 1));
+      expect(updated.createdAt, DateTime(2026));
       expect(updated.isCompleted, isFalse);
       expect(updated.priorityKey, 'medium');
       expect(updated.dueDate, DateTime(2026, 1, 6));

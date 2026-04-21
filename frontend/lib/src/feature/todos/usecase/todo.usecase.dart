@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/todos/data/providers/todo_repository_provider.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo_repository.dart';
+import 'package:uuid/uuid.dart';
 
 part 'todo.usecase.g.dart';
 
@@ -38,7 +39,7 @@ class TodoUsecase extends _$TodoUsecase {
     }
 
     final newTodo = Todo(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       title: trimmedText,
       createdAt: DateTime.now(),
       isCompleted: false,
@@ -74,6 +75,6 @@ class TodoUsecase extends _$TodoUsecase {
   }
 
   Future<void> _refreshTodos() async {
-    state = AsyncData<List<Todo>>(await _todoRepository.getTodos());
+    state = await AsyncValue.guard(() => _todoRepository.getTodos());
   }
 }

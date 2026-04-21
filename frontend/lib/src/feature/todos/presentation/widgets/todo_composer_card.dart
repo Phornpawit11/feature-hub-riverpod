@@ -32,7 +32,7 @@ class TodoComposerCard extends StatelessWidget {
   final ValueChanged<TodoPriority> onPriorityChanged;
   final ValueChanged<DateTime?> onDueDateChanged;
   final ValueChanged<String?> onColorChanged;
-  final Future<void> Function() onSubmit;
+  final Future<void> Function()? onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +158,7 @@ class _ExpandedComposer extends StatelessWidget {
   final ValueChanged<TodoPriority> onPriorityChanged;
   final ValueChanged<DateTime?> onDueDateChanged;
   final ValueChanged<String?> onColorChanged;
-  final Future<void> Function() onSubmit;
+  final Future<void> Function()? onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +190,7 @@ class _ExpandedComposer extends StatelessWidget {
           onPriorityChanged: onPriorityChanged,
           onDueDateChanged: onDueDateChanged,
           onColorChanged: onColorChanged,
-          onSubmitted: onSubmit,
+          onSubmitted: onSubmit ?? () async {},
         ),
         const SizedBox(height: 16),
         SizedBox(
