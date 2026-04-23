@@ -35,6 +35,46 @@ void main() {
     });
 
     test(
+      'updateProfile sends patch request and parses user',
+      () async {
+        late RequestOptions capturedOptions;
+        final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
+          ..interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                capturedOptions = options;
+                handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    data: {
+                      'id': 'user-1',
+                      'email': 'test@example.com',
+                      'displayName': 'Updated User',
+                      'provider': 'google',
+                      'avatarUrl': null,
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+
+        final datasource = AuthRemoteDatasource(dio);
+
+        final user = await datasource.updateProfile(
+          displayName: 'Updated User',
+          accessToken: 'jwt-token',
+        );
+
+        expect(capturedOptions.path, '/auth/profile');
+        expect(capturedOptions.method, 'PATCH');
+        expect(capturedOptions.data, {'displayName': 'Updated User'});
+        expect(capturedOptions.headers['Authorization'], 'Bearer jwt-token');
+        expect(user.displayName, 'Updated User');
+      },
+    );
+
+    test(
       'registerWithEmailPassword sends register request and parses session',
       () async {
         late RequestOptions capturedOptions;

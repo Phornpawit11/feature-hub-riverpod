@@ -1,5 +1,6 @@
 import { InjectModel } from '@nestjs/mongoose';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -9,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import {
   CheckEmailAvailabilityResponse,
   AuthSuccessResponse,
@@ -22,6 +23,7 @@ import { User, UserDocument } from './user.schema';
 import { CheckEmailDto } from './dto/check-email.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
@@ -71,6 +73,28 @@ export class AuthService {
     return this.createAuthResponse(user);
   }
 
+  async updateProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<AuthUserResponse> {
+    const displayName = updateProfileDto.displayName.trim();
+
+    if (displayName.length === 0) {
+      throw new BadRequestException('Display name cannot be empty');
+    }
+
+    const user = await this.userModel.findById(userId).exec();
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    user.displayName = displayName;
+    await user.save();
+
+    return this.toAuthUser(user);
+  }
+
   async login(loginDto: LoginDto): Promise<AuthSuccessResponse> {
     const email = this.normalizeEmail(loginDto.email);
     const user = await this.userModel.findOne({ email }).exec();
@@ -99,7 +123,7 @@ export class AuthService {
     googleLoginDto: GoogleLoginDto,
   ): Promise<AuthSuccessResponse> {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    let payload;
+    let payload: TokenPayload | undefined;
 
     try {
       const ticket = await this.googleClient.verifyIdToken({

@@ -17,6 +17,7 @@ import { User } from '../../src/modules/auth/user.schema';
 import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
 import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
+import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
 
@@ -238,6 +239,44 @@ describe('AuthController (e2e)', () => {
     });
   });
 
+  it('updates profile displayName for authenticated user', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      avatarUrl: null,
+      provider: 'google',
+      save: jest.fn(),
+    };
+    userModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(user as never),
+    });
+
+    const updateProfileDto = (await validationPipe.transform(
+      {
+        displayName: ' Updated User ',
+      },
+      {
+        type: 'body',
+        metatype: UpdateProfileDto,
+      },
+    )) as UpdateProfileDto;
+
+    const response = await controller.updateProfile(
+      { user: { id: 'user-1' } } as never,
+      updateProfileDto,
+    );
+
+    expect(response).toEqual({
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      provider: 'google',
+    });
+    expect(user.save).toHaveBeenCalled();
+  });
+
   it('returns 401 for wrong password', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockImplementation(async () => ({
@@ -334,6 +373,27 @@ describe('AuthController (e2e)', () => {
           expect.stringContaining('displayName'),
           expect.stringContaining('email'),
           expect.stringContaining('password'),
+        ]),
+      },
+    });
+  });
+
+  it('returns 400 for invalid update-profile payload', async () => {
+    await expect(
+      validationPipe.transform(
+        {
+          displayName: '',
+        },
+        {
+          type: 'body',
+          metatype: UpdateProfileDto,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        message: expect.arrayContaining([
+          expect.stringContaining('displayName'),
         ]),
       },
     });

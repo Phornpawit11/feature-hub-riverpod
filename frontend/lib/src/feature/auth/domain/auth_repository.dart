@@ -6,6 +6,8 @@ part 'auth_repository.freezed.dart';
 abstract class AuthRepository {
   Future<bool> checkEmailAvailability({required String email});
 
+  Future<AuthUser> updateProfile({required String displayName});
+
   Future<AuthSession> registerWithEmailPassword({
     required String displayName,
     required String email,

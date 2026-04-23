@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todos_riverpod/src/core/settings/app_preferences.dart';
 import 'package:todos_riverpod/src/core/settings/app_preferences_state.dart';
+import 'package:todos_riverpod/src/core/widgets/app_text_field.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
@@ -15,13 +16,20 @@ class AppDrawer extends ConsumerWidget {
     final cs = theme.colorScheme;
     final preferences = ref.watch(appPreferencesProvider);
     final authState = ref.watch(authUsecaseProvider);
+    final isAuthenticated = authState.status == AuthStatus.authenticated;
+    final user = authState.user;
 
     return Drawer(
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
           children: [
-            _ProfileCard(authState: authState),
+            _ProfileCard(
+              authState: authState,
+              onTap: isAuthenticated && user != null
+                  ? () => _showEditProfileSheet(context, ref, initialUser: user)
+                  : null,
+            ),
 
             const SizedBox(height: 20),
             _SectionCard(
@@ -168,12 +176,31 @@ class AppDrawer extends ConsumerWidget {
       },
     );
   }
+
+  static Future<void> _showEditProfileSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required AuthUser initialUser,
+  }) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: cs.surface,
+      builder: (sheetContext) =>
+          _EditProfileSheet(theme: theme, initialUser: initialUser),
+    );
+  }
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.authState});
+  const _ProfileCard({required this.authState, this.onTap});
 
   final AuthState authState;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +209,8 @@ class _ProfileCard extends StatelessWidget {
     final user = authState.user;
     final isAuthenticated = authState.status == AuthStatus.authenticated;
 
-    return Container(
+    final profileContent = Container(
+      key: const Key('profile-card'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -218,28 +246,52 @@ class _ProfileCard extends StatelessWidget {
                 ),
                 if (isAuthenticated && user != null) ...[
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      _providerLabel(user.provider),
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: cs.primary,
-                        fontWeight: FontWeight.w600,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          _providerLabel(user.provider),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ],
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 12),
+            Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
+          ],
         ],
+      ),
+    );
+
+    if (onTap == null) {
+      return profileContent;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: profileContent,
       ),
     );
   }
@@ -253,6 +305,164 @@ class _ProfileCard extends StatelessWidget {
             ? 'Account'
             : '${provider[0].toUpperCase()}${provider.substring(1)}',
     };
+  }
+}
+
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet({required this.theme, required this.initialUser});
+
+  final ThemeData theme;
+  final AuthUser initialUser;
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  late final TextEditingController _displayNameController;
+  String? _displayNameError;
+  String? _submitError;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayNameController = TextEditingController(
+      text: widget.initialUser.displayName,
+    );
+  }
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final displayName = _displayNameController.text.trim();
+
+    setState(() {
+      _displayNameError = displayName.isEmpty ? 'Enter your name.' : null;
+      _submitError = null;
+    });
+
+    if (displayName.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    final didSave = await ref
+        .read(authUsecaseProvider.notifier)
+        .updateDisplayName(displayName: displayName);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (didSave) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() {
+      _isSaving = false;
+      _submitError =
+          ref.read(authUsecaseProvider).errorMessage ??
+          'Something went wrong. Please try again.';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final cs = theme.colorScheme;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Edit your name',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose how your workspace should greet you.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              controller: _displayNameController,
+              hintText: 'Display name',
+              prefixIcon: Icons.badge_outlined,
+              textInputAction: TextInputAction.done,
+              autofocus: true,
+              enabled: !_isSaving,
+              errorText: _displayNameError,
+              onChanged: (_) {
+                if (_displayNameError == null && _submitError == null) {
+                  return;
+                }
+
+                setState(() {
+                  _displayNameError = null;
+                  _submitError = null;
+                });
+              },
+              onSubmitted: (_) => _save(),
+            ),
+            if (_submitError != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _submitError!,
+                style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+              ),
+            ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

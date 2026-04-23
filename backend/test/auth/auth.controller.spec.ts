@@ -10,6 +10,7 @@ import { AuthService } from '../../src/modules/auth/auth.service';
 import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
 import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
+import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
 import { GoogleLoginDto } from '../../src/modules/auth/dto/google-login.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
@@ -18,6 +19,7 @@ describe('AuthController', () => {
   const authService = {
     checkEmailAvailability: jest.fn(),
     register: jest.fn(),
+    updateProfile: jest.fn(),
     login: jest.fn(),
     loginWithGoogle: jest.fn(),
     refresh: jest.fn(),
@@ -70,6 +72,30 @@ describe('AuthController', () => {
 
     await expect(controller.register(registerDto)).resolves.toEqual(response);
     expect(authService.register).toHaveBeenCalledWith(registerDto);
+  });
+
+  it('delegates profile update to auth service', async () => {
+    const updateProfileDto: UpdateProfileDto = {
+      displayName: 'Updated User',
+    };
+    const response = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Updated User',
+      provider: 'password',
+      avatarUrl: null,
+    };
+    const request = { user: { id: 'user-1' } } as never;
+
+    authService.updateProfile.mockResolvedValue(response as never);
+
+    await expect(
+      controller.updateProfile(request, updateProfileDto),
+    ).resolves.toEqual(response);
+    expect(authService.updateProfile).toHaveBeenCalledWith(
+      'user-1',
+      updateProfileDto,
+    );
   });
 
   it('delegates login to auth service', async () => {

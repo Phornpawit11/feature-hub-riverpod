@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { AuthService } from '../../src/modules/auth/auth.service';
 import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
 import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
+import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -149,6 +151,42 @@ describe('AuthService', () => {
       provider: 'password',
     });
     expect(user.save).toHaveBeenCalled();
+  });
+
+  it('updates displayName and returns updated auth user', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      avatarUrl: null,
+      provider: 'google',
+      save: jest.fn(),
+    };
+    const updateProfileDto: UpdateProfileDto = {
+      displayName: ' Updated User ',
+    };
+    userModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(user as never),
+    });
+
+    await expect(
+      service.updateProfile('user-1', updateProfileDto),
+    ).resolves.toEqual({
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      provider: 'google',
+    });
+
+    expect(user.displayName).toBe('Updated User');
+    expect(user.save).toHaveBeenCalled();
+  });
+
+  it('rejects updateProfile when trimmed displayName is empty', async () => {
+    await expect(
+      service.updateProfile('user-1', { displayName: '   ' }),
+    ).rejects.toThrow(new BadRequestException('Display name cannot be empty'));
   });
 
   it('rejects register when email already exists', async () => {

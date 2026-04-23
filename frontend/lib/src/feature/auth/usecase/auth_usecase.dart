@@ -127,6 +127,32 @@ class AuthUsecase extends _$AuthUsecase {
     return _repository.checkEmailAvailability(email: email.trim());
   }
 
+  Future<bool> updateDisplayName({required String displayName}) async {
+    try {
+      final updatedUser = await _repository.updateProfile(
+        displayName: displayName.trim(),
+      );
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: updatedUser,
+        clearError: true,
+      );
+      return true;
+    } on AuthException catch (error) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        errorMessage: error.message,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+      return false;
+    }
+  }
+
   Future<void> registerWithEmailPassword({
     required String displayName,
     required String email,

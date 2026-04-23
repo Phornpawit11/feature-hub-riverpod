@@ -10,6 +10,7 @@ import 'package:todos_riverpod/src/feature/auth/data/model/login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/logout_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/register_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/update_profile_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 
@@ -36,6 +37,27 @@ class AuthRemoteDatasource {
       );
     } on FormatException {
       throw const AuthException('Invalid server response.');
+    }
+  }
+
+  Future<AuthUser> updateProfile({
+    required String displayName,
+    required String accessToken,
+  }) async {
+    try {
+      final request = UpdateProfileRequest(displayName: displayName);
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/auth/profile',
+        data: request.toJson(),
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+
+      return AuthUser.fromJson(response.data ?? const {});
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
     }
   }
 

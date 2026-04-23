@@ -158,6 +158,61 @@ void main() {
     );
 
     test(
+      'updateDisplayName updates authenticated user without touching tokens',
+      () async {
+        fakeRepository.currentUser = _testUser();
+        fakeRepository.updateProfileResult = AuthUser(
+          id: 'user-1',
+          email: 'test@example.com',
+          displayName: 'Updated User',
+          provider: 'google',
+        );
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        notifier.state = AuthState(
+          status: AuthStatus.authenticated,
+          user: _testUser(),
+        );
+
+        final result = await notifier.updateDisplayName(
+          displayName: ' Updated User ',
+        );
+
+        final state = container.read(authUsecaseProvider);
+        expect(result, isTrue);
+        expect(fakeRepository.lastDisplayName, 'Updated User');
+        expect(state.status, AuthStatus.authenticated);
+        expect(state.user?.displayName, 'Updated User');
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+      },
+    );
+
+    test(
+      'updateDisplayName preserves current user and exposes backend error',
+      () async {
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        notifier.state = AuthState(
+          status: AuthStatus.authenticated,
+          user: _testUser(),
+        );
+        fakeRepository.updateProfileError = const AuthException(
+          'Display name cannot be empty',
+        );
+
+        final result = await notifier.updateDisplayName(displayName: '  ');
+
+        final state = container.read(authUsecaseProvider);
+        expect(result, isFalse);
+        expect(state.status, AuthStatus.authenticated);
+        expect(state.user?.displayName, 'Test User');
+        expect(state.errorMessage, 'Display name cannot be empty');
+      },
+    );
+
+    test(
       'registerWithEmailPassword stores tokens and authenticates on success',
       () async {
         fakeRepository.registerSession = AuthSession(
@@ -321,6 +376,8 @@ AuthUser _testUser() {
 class _FakeAuthRepository implements AuthRepository {
   bool checkEmailAvailabilityResult = true;
   AuthException? checkEmailAvailabilityError;
+  AuthUser? updateProfileResult;
+  AuthException? updateProfileError;
   AuthSession? registerSession;
   AuthException? registerError;
   AuthSession? emailSession;
@@ -364,6 +421,23 @@ class _FakeAuthRepository implements AuthRepository {
     }
 
     return checkEmailAvailabilityResult;
+  }
+
+  @override
+  Future<AuthUser> updateProfile({required String displayName}) async {
+    lastDisplayName = displayName;
+
+    if (updateProfileError != null) {
+      throw updateProfileError!;
+    }
+
+    return updateProfileResult ??
+        AuthUser(
+          id: 'user-1',
+          email: 'test@example.com',
+          displayName: displayName,
+          provider: 'password',
+        );
   }
 
   @override
