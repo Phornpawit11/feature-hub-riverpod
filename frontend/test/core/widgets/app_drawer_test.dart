@@ -298,10 +298,9 @@ class _FakeAuthUsecase extends AuthUsecase {
       return false;
     }
 
-    state = state.copyWith(
+    state = state.clearError(
       status: AuthStatus.authenticated,
       user: state.user?.copyWith(displayName: displayName.trim()),
-      clearError: true,
     );
     return true;
   }

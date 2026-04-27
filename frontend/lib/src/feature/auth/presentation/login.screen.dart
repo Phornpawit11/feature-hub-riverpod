@@ -35,7 +35,6 @@ class LoginScreen extends HookConsumerWidget {
     final passwordFieldError =
         passwordError.value ?? (isGoogleAttempt ? null : authErrorMessage);
     final googleAuthError = isGoogleAttempt ? authErrorMessage : null;
-
     void clearErrors() {
       emailError.value = null;
       passwordError.value = null;

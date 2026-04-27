@@ -21,7 +21,7 @@ class AuthUsecase extends _$AuthUsecase {
   }
 
   Future<void> restoreSession() async {
-    state = state.copyWith(status: AuthStatus.restoring, clearError: true);
+    state = state.clearError(status: AuthStatus.restoring);
 
     final accessToken = await _storage.readAccessToken();
     final refreshToken = await _storage.readRefreshToken();
@@ -98,7 +98,7 @@ class AuthUsecase extends _$AuthUsecase {
     required String email,
     required String password,
   }) async {
-    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+    state = state.clearError(status: AuthStatus.authenticating);
 
     try {
       final session = await _repository.signInWithEmailPassword(
@@ -132,10 +132,9 @@ class AuthUsecase extends _$AuthUsecase {
       final updatedUser = await _repository.updateProfile(
         displayName: displayName.trim(),
       );
-      state = state.copyWith(
+      state = state.clearError(
         status: AuthStatus.authenticated,
         user: updatedUser,
-        clearError: true,
       );
       return true;
     } on AuthException catch (error) {
@@ -158,7 +157,7 @@ class AuthUsecase extends _$AuthUsecase {
     required String email,
     required String password,
   }) async {
-    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+    state = state.clearError(status: AuthStatus.authenticating);
 
     try {
       final session = await _repository.registerWithEmailPassword(
@@ -194,7 +193,7 @@ class AuthUsecase extends _$AuthUsecase {
       return;
     }
 
-    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+    state = state.clearError(status: AuthStatus.authenticating);
 
     try {
       final session = await _repository.signInWithGoogle();
@@ -239,9 +238,8 @@ class AuthUsecase extends _$AuthUsecase {
       return;
     }
 
-    state = state.copyWith(
+    state = state.clearError(
       status: AuthStatus.unauthenticated,
-      clearError: true,
       clearUser: true,
     );
   }

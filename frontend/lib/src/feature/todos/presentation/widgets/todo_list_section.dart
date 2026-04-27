@@ -38,16 +38,24 @@ class TodoListSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ...todos.map(
-          (todo) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: TodoTile(
-              todo: todo,
-              onEdit: () => onEdit(todo),
-              onToggle: () => onToggle(todo.id),
-              onDelete: () => onDelete(todo.id),
-            ),
-          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: todos.length,
+          itemBuilder: (context, index) {
+            final todo = todos[index];
+
+            return Padding(
+              key: ValueKey(todo.id),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TodoTile(
+                todo: todo,
+                onEdit: () => onEdit(todo),
+                onToggle: () => onToggle(todo.id),
+                onDelete: () => onDelete(todo.id),
+              ),
+            );
+          },
         ),
       ],
     );

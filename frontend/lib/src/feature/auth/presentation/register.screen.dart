@@ -168,11 +168,13 @@ class RegisterScreen extends HookConsumerWidget {
       }
 
       didSubmitRegister.value = true;
-      await ref.read(authUsecaseProvider.notifier).registerWithEmailPassword(
-        displayName: displayName,
-        email: email,
-        password: password,
-      );
+      await ref
+          .read(authUsecaseProvider.notifier)
+          .registerWithEmailPassword(
+            displayName: displayName,
+            email: email,
+            password: password,
+          );
     }
 
     final headerTitle = switch (currentStep.value) {
@@ -350,9 +352,7 @@ class RegisterScreen extends HookConsumerWidget {
                                   prefixIcon: Icons.verified_user_outlined,
                                   obscureText: !isConfirmPasswordVisible.value,
                                   textInputAction: TextInputAction.done,
-                                  autofillHints: const [
-                                    AutofillHints.password,
-                                  ],
+                                  autofillHints: const [AutofillHints.password],
                                   enabled: !isSubmitting,
                                   errorText: confirmPasswordError.value,
                                   suffixIcon: IconButton(
@@ -361,9 +361,8 @@ class RegisterScreen extends HookConsumerWidget {
                                         : 'Show password',
                                     onPressed: isSubmitting
                                         ? null
-                                        : () =>
-                                            isConfirmPasswordVisible.value =
-                                                !isConfirmPasswordVisible.value,
+                                        : () => isConfirmPasswordVisible.value =
+                                              !isConfirmPasswordVisible.value,
                                     icon: Icon(
                                       isConfirmPasswordVisible.value
                                           ? Icons.visibility_off_outlined
@@ -425,8 +424,8 @@ class RegisterScreen extends HookConsumerWidget {
                                                 height: 20,
                                                 child:
                                                     CircularProgressIndicator(
-                                                  strokeWidth: 2.2,
-                                                ),
+                                                      strokeWidth: 2.2,
+                                                    ),
                                               )
                                             : const Text('Create account'),
                                       ),
@@ -436,10 +435,9 @@ class RegisterScreen extends HookConsumerWidget {
                               ],
                               const SizedBox(height: 18),
                               TextButton(
-                                onPressed:
-                                    isCheckingEmail.value || isSubmitting
-                                        ? null
-                                        : () => context.go(SGRoute.login.route),
+                                onPressed: isCheckingEmail.value || isSubmitting
+                                    ? null
+                                    : () => context.go(SGRoute.login.route),
                                 child: const Text(
                                   'Already have an account? Sign in',
                                 ),
