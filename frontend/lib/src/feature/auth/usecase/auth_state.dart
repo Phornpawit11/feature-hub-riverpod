@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
+
+part 'auth_state.freezed.dart';
 
 enum AuthStatus {
   restoring,
@@ -8,29 +11,30 @@ enum AuthStatus {
   failure,
 }
 
-class AuthState {
-  const AuthState({required this.status, this.user, this.errorMessage});
+@freezed
+abstract class AuthState with _$AuthState {
+  const factory AuthState({
+    required AuthStatus status,
+    AuthUser? user,
+    String? errorMessage,
+  }) = _AuthState;
 
-  final AuthStatus status;
-  final AuthUser? user;
-  final String? errorMessage;
+  const AuthState._();
 
   bool get isBusy =>
       status == AuthStatus.restoring || status == AuthStatus.authenticating;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 
-  AuthState copyWith({
+  AuthState clearError({
     AuthStatus? status,
     AuthUser? user,
-    String? errorMessage,
     bool clearUser = false,
-    bool clearError = false,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: clearUser ? null : (user ?? this.user),
-      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      errorMessage: null,
     );
   }
 

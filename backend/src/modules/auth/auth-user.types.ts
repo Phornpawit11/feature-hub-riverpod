@@ -18,6 +18,10 @@ export interface LogoutResponse {
   success: boolean;
 }
 
+export interface CheckEmailAvailabilityResponse {
+  available: boolean;
+}
+
 export interface JwtPayload {
   sub: string;
   email: string;

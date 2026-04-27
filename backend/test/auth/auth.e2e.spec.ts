@@ -14,7 +14,10 @@ import {
 import { AuthController } from '../../src/modules/auth/auth.controller';
 import { AuthService } from '../../src/modules/auth/auth.service';
 import { User } from '../../src/modules/auth/user.schema';
+import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
+import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
+import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
 
@@ -29,6 +32,7 @@ describe('AuthController (e2e)', () => {
   const userModel = {
     findOne: jest.fn(),
     findById: jest.fn(),
+    create: jest.fn(),
     updateOne: jest.fn(),
   };
 
@@ -135,6 +139,144 @@ describe('AuthController (e2e)', () => {
     });
   });
 
+  it('returns available true when email can be used for registration', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null as never),
+    });
+
+    const checkEmailDto = (await validationPipe.transform(
+      {
+        email: 'Test@Example.com',
+      },
+      {
+        type: 'body',
+        metatype: CheckEmailDto,
+      },
+    )) as CheckEmailDto;
+
+    const response = await controller.checkEmailAvailability(checkEmailDto);
+
+    expect(response).toEqual({ available: true });
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    });
+  });
+
+  it('returns available false when email already exists', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+      } as never),
+    });
+
+    const checkEmailDto = (await validationPipe.transform(
+      {
+        email: 'test@example.com',
+      },
+      {
+        type: 'body',
+        metatype: CheckEmailDto,
+      },
+    )) as CheckEmailDto;
+
+    const response = await controller.checkEmailAvailability(checkEmailDto);
+
+    expect(response).toEqual({ available: false });
+  });
+
+  it('returns access and refresh tokens for valid registration', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null as never),
+    });
+    userModel.create.mockResolvedValue({
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      passwordHash: 'hashed-password',
+      avatarUrl: null,
+      provider: 'password',
+      save: jest.fn(),
+    } as never);
+    mockedBcrypt.hash
+      .mockResolvedValueOnce('hashed-password' as never)
+      .mockResolvedValueOnce('hashed-refresh-token' as never);
+    jwtService.signAsync
+      .mockResolvedValueOnce('jwt-token' as never)
+      .mockResolvedValueOnce('refresh-token' as never);
+    jwtService.verifyAsync.mockResolvedValue({
+      sid: 'session-1',
+      exp: 2_000_000_000,
+    } as never);
+
+    const registerDto = (await validationPipe.transform(
+      {
+        displayName: 'Test User',
+        email: 'Test@Example.com',
+        password: 'password123',
+      },
+      {
+        type: 'body',
+        metatype: RegisterDto,
+      },
+    )) as RegisterDto;
+
+    const response = await controller.register(registerDto);
+
+    expect(response).toEqual({
+      accessToken: 'jwt-token',
+      refreshToken: 'refresh-token',
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        avatarUrl: null,
+        provider: 'password',
+      },
+    });
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    });
+  });
+
+  it('updates profile displayName for authenticated user', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Test User',
+      avatarUrl: null,
+      provider: 'google',
+      save: jest.fn(),
+    };
+    userModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(user as never),
+    });
+
+    const updateProfileDto = (await validationPipe.transform(
+      {
+        displayName: ' Updated User ',
+      },
+      {
+        type: 'body',
+        metatype: UpdateProfileDto,
+      },
+    )) as UpdateProfileDto;
+
+    const response = await controller.updateProfile(
+      { user: { id: 'user-1' } } as never,
+      updateProfileDto,
+    );
+
+    expect(response).toEqual({
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Updated User',
+      avatarUrl: null,
+      provider: 'google',
+    });
+    expect(user.save).toHaveBeenCalled();
+  });
+
   it('returns 401 for wrong password', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockImplementation(async () => ({
@@ -185,6 +327,73 @@ describe('AuthController (e2e)', () => {
         message: expect.arrayContaining([
           expect.stringContaining('email'),
           expect.stringContaining('password'),
+        ]),
+      },
+    });
+  });
+
+  it('returns 400 for invalid check-email payload', async () => {
+    await expect(
+      validationPipe.transform(
+        {
+          email: 'bad-email',
+        },
+        {
+          type: 'body',
+          metatype: CheckEmailDto,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        message: expect.arrayContaining([
+          expect.stringContaining('email'),
+        ]),
+      },
+    });
+  });
+
+  it('returns 400 for invalid register payload', async () => {
+    await expect(
+      validationPipe.transform(
+        {
+          displayName: '',
+          email: 'bad-email',
+          password: 'short',
+        },
+        {
+          type: 'body',
+          metatype: RegisterDto,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        message: expect.arrayContaining([
+          expect.stringContaining('displayName'),
+          expect.stringContaining('email'),
+          expect.stringContaining('password'),
+        ]),
+      },
+    });
+  });
+
+  it('returns 400 for invalid update-profile payload', async () => {
+    await expect(
+      validationPipe.transform(
+        {
+          displayName: '',
+        },
+        {
+          type: 'body',
+          metatype: UpdateProfileDto,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: {
+        message: expect.arrayContaining([
+          expect.stringContaining('displayName'),
         ]),
       },
     });

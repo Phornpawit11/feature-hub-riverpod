@@ -52,7 +52,11 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
-      final redirect = _evalRedirect(router, '/todo', AuthState.unauthenticated);
+      final redirect = _evalRedirect(
+        router,
+        '/todo',
+        AuthState.unauthenticated,
+      );
 
       expect(redirect, '/login');
     });
@@ -67,6 +71,20 @@ void main() {
 
       final router = container.read(goRouterProvider);
       final redirect = _evalRedirect(router, '/login', authState);
+
+      expect(redirect, '/todo');
+    });
+
+    test('redirect to /todo when authenticated and on /register', () {
+      final authState = AuthState(
+        status: AuthStatus.authenticated,
+        user: _testUser(),
+      );
+      final container = makeContainer(authState);
+      addTearDown(container.dispose);
+
+      final router = container.read(goRouterProvider);
+      final redirect = _evalRedirect(router, '/register', authState);
 
       expect(redirect, '/todo');
     });
@@ -106,10 +124,13 @@ String? _evalRedirect(GoRouter router, String location, AuthState authState) {
   // ดึง redirect function ผ่าน RouterConfig
   // เปรียบเทียบ location กับ auth state ตาม logic ใน app_router.dart
   final isLoginRoute = location == '/login';
+  final isRegisterRoute = location == '/register';
   final isTodoRoute = location == '/todo';
 
   if (!authState.isAuthenticated && isTodoRoute) return '/login';
-  if (authState.isAuthenticated && isLoginRoute) return '/todo';
+  if (authState.isAuthenticated && (isLoginRoute || isRegisterRoute)) {
+    return '/todo';
+  }
   return null;
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/login.screen.dart';
+import 'package:todos_riverpod/src/feature/auth/presentation/register.screen.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
@@ -11,6 +12,7 @@ part 'app_router.g.dart';
 
 enum SGRoute {
   login,
+  register,
   landing,
   todo;
 
@@ -46,6 +48,13 @@ GoRouter goRouter(Ref ref) {
         },
       ),
       GoRoute(
+        path: SGRoute.register.route,
+        name: SGRoute.register.name,
+        builder: (BuildContext context, GoRouterState state) {
+          return const RegisterScreen();
+        },
+      ),
+      GoRoute(
         path: SGRoute.landing.route,
         name: SGRoute.landing.name,
         builder: (BuildContext context, GoRouterState state) {
@@ -64,13 +73,14 @@ GoRouter goRouter(Ref ref) {
       final auth = listenable.value;
       final location = state.matchedLocation;
       final isLoginRoute = location == SGRoute.login.route;
+      final isRegisterRoute = location == SGRoute.register.route;
       final isTodoRoute = location == SGRoute.todo.route;
 
       if (!auth.isAuthenticated && isTodoRoute) {
         return SGRoute.login.route;
       }
 
-      if (auth.isAuthenticated && isLoginRoute) {
+      if (auth.isAuthenticated && (isLoginRoute || isRegisterRoute)) {
         return SGRoute.todo.route;
       }
 

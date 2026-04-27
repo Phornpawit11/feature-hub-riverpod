@@ -21,7 +21,7 @@ class AuthUsecase extends _$AuthUsecase {
   }
 
   Future<void> restoreSession() async {
-    state = state.copyWith(status: AuthStatus.restoring, clearError: true);
+    state = state.clearError(status: AuthStatus.restoring);
 
     final accessToken = await _storage.readAccessToken();
     final refreshToken = await _storage.readRefreshToken();
@@ -98,10 +98,70 @@ class AuthUsecase extends _$AuthUsecase {
     required String email,
     required String password,
   }) async {
-    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+    state = state.clearError(status: AuthStatus.authenticating);
 
     try {
       final session = await _repository.signInWithEmailPassword(
+        email: email.trim(),
+        password: password,
+      );
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+      setAuthenticatedSession(session);
+    } on AuthException catch (error) {
+      state = AuthState(
+        status: AuthStatus.failure,
+        errorMessage: error.message,
+      );
+    } catch (_) {
+      state = const AuthState(
+        status: AuthStatus.failure,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+    }
+  }
+
+  Future<bool> checkEmailAvailability({required String email}) {
+    return _repository.checkEmailAvailability(email: email.trim());
+  }
+
+  Future<bool> updateDisplayName({required String displayName}) async {
+    try {
+      final updatedUser = await _repository.updateProfile(
+        displayName: displayName.trim(),
+      );
+      state = state.clearError(
+        status: AuthStatus.authenticated,
+        user: updatedUser,
+      );
+      return true;
+    } on AuthException catch (error) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        errorMessage: error.message,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+      return false;
+    }
+  }
+
+  Future<void> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    state = state.clearError(status: AuthStatus.authenticating);
+
+    try {
+      final session = await _repository.registerWithEmailPassword(
+        displayName: displayName.trim(),
         email: email.trim(),
         password: password,
       );
@@ -133,7 +193,7 @@ class AuthUsecase extends _$AuthUsecase {
       return;
     }
 
-    state = state.copyWith(status: AuthStatus.authenticating, clearError: true);
+    state = state.clearError(status: AuthStatus.authenticating);
 
     try {
       final session = await _repository.signInWithGoogle();
@@ -178,9 +238,8 @@ class AuthUsecase extends _$AuthUsecase {
       return;
     }
 
-    state = state.copyWith(
+    state = state.clearError(
       status: AuthStatus.unauthenticated,
-      clearError: true,
       clearUser: true,
     );
   }

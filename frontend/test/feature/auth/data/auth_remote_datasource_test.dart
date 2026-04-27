@@ -5,6 +5,125 @@ import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 
 void main() {
   group('AuthRemoteDatasource', () {
+    test('checkEmailAvailability sends request and parses availability', () async {
+      late RequestOptions capturedOptions;
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              capturedOptions = options;
+              handler.resolve(
+                Response<Map<String, dynamic>>(
+                  requestOptions: options,
+                  data: {'available': true},
+                ),
+              );
+            },
+          ),
+        );
+
+      final datasource = AuthRemoteDatasource(dio);
+
+      final available = await datasource.checkEmailAvailability(
+        email: 'test@example.com',
+      );
+
+      expect(capturedOptions.path, '/auth/check-email');
+      expect(capturedOptions.method, 'POST');
+      expect(capturedOptions.data, {'email': 'test@example.com'});
+      expect(available, isTrue);
+    });
+
+    test(
+      'updateProfile sends patch request and parses user',
+      () async {
+        late RequestOptions capturedOptions;
+        final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
+          ..interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                capturedOptions = options;
+                handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    data: {
+                      'id': 'user-1',
+                      'email': 'test@example.com',
+                      'displayName': 'Updated User',
+                      'provider': 'google',
+                      'avatarUrl': null,
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+
+        final datasource = AuthRemoteDatasource(dio);
+
+        final user = await datasource.updateProfile(
+          displayName: 'Updated User',
+          accessToken: 'jwt-token',
+        );
+
+        expect(capturedOptions.path, '/auth/profile');
+        expect(capturedOptions.method, 'PATCH');
+        expect(capturedOptions.data, {'displayName': 'Updated User'});
+        expect(capturedOptions.headers['Authorization'], 'Bearer jwt-token');
+        expect(user.displayName, 'Updated User');
+      },
+    );
+
+    test(
+      'registerWithEmailPassword sends register request and parses session',
+      () async {
+        late RequestOptions capturedOptions;
+        final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
+          ..interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                capturedOptions = options;
+                handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    data: {
+                      'accessToken': 'jwt-token',
+                      'refreshToken': 'refresh-token',
+                      'user': {
+                        'id': 'user-1',
+                        'email': 'test@example.com',
+                        'displayName': 'Test User',
+                        'provider': 'password',
+                        'avatarUrl': null,
+                      },
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+
+        final datasource = AuthRemoteDatasource(dio);
+
+        final session = await datasource.registerWithEmailPassword(
+          displayName: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(capturedOptions.path, '/auth/register');
+        expect(capturedOptions.method, 'POST');
+        expect(capturedOptions.data, {
+          'displayName': 'Test User',
+          'email': 'test@example.com',
+          'password': 'password123',
+        });
+        expect(session.accessToken, 'jwt-token');
+        expect(session.refreshToken, 'refresh-token');
+        expect(session.user.displayName, 'Test User');
+      },
+    );
+
     test(
       'signInWithEmailPassword sends login request and parses session',
       () async {

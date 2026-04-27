@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:todos_riverpod/src/core/storage/secure_token_storage.dart';
 import 'package:todos_riverpod/src/feature/auth/data/datasource/auth_remote_datasource.dart';
 import 'package:todos_riverpod/src/feature/auth/data/google_sign_in_adapter.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
@@ -13,11 +14,34 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
     implements AuthRepository {
   AuthRemoteDatasource get _remoteDatasource =>
       ref.watch(authRemoteDatasourceProvider);
+  SecureTokenStorage get _storage => ref.watch(secureTokenStorageProvider);
   GoogleSignInAdapter get _googleSignInAdapter =>
       ref.watch(googleSignInAdapterProvider);
   @override
   FutureOr<void> build() {
     ref.keepAlive();
+  }
+
+  @override
+  Future<bool> checkEmailAvailability({required String email}) {
+    return _remoteDatasource.checkEmailAvailability(email: email);
+  }
+
+  @override
+  Future<AuthUser> updateProfile({required String displayName}) async {
+    final accessToken = await _storage.readAccessToken();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw const AuthException(
+        'Session expired. Please sign in again.',
+        statusCode: 401,
+      );
+    }
+
+    return _remoteDatasource.updateProfile(
+      displayName: displayName,
+      accessToken: accessToken,
+    );
   }
 
   @override
@@ -33,6 +57,19 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   @override
   Future<void> logout({required String refreshToken}) {
     return _remoteDatasource.logout(refreshToken: refreshToken);
+  }
+
+  @override
+  Future<AuthSession> registerWithEmailPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) {
+    return _remoteDatasource.registerWithEmailPassword(
+      displayName: displayName,
+      email: email,
+      password: password,
+    );
   }
 
   @override
