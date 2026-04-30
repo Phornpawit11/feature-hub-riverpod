@@ -34,7 +34,6 @@ abstract class AuthState with _$AuthState {
     return AuthState(
       status: status ?? this.status,
       user: clearUser ? null : (user ?? this.user),
-      errorMessage: null,
     );
   }
 

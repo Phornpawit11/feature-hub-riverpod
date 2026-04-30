@@ -7,6 +7,7 @@ import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo.screen.dart';
+import 'package:todos_riverpod/src/feature/todos/presentation/todo_route_params.dart';
 
 part 'app_router.g.dart';
 
@@ -65,7 +66,11 @@ GoRouter goRouter(Ref ref) {
         path: SGRoute.todo.route,
         name: SGRoute.todo.name,
         builder: (BuildContext context, GoRouterState state) {
-          return const TodoScreen();
+          final routeParams = TodoRouteParams.fromUri(state.uri);
+          return TodoScreen(
+            initialFocusedMonth: routeParams.focusedMonth,
+            initialSelectedDate: routeParams.selectedDate,
+          );
         },
       ),
     ],
@@ -81,7 +86,7 @@ GoRouter goRouter(Ref ref) {
       }
 
       if (auth.isAuthenticated && (isLoginRoute || isRegisterRoute)) {
-        return SGRoute.todo.route;
+        return SGRoute.landing.route;
       }
 
       return null;

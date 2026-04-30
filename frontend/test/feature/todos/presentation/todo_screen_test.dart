@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/date_tag.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo.screen.dart';
+import 'package:todos_riverpod/src/feature/todos/usecase/calendar_background_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/todo.usecase.dart';
@@ -16,13 +17,19 @@ void main() {
   Widget buildSubject({
     _FakeTodoUsecase? todoNotifier,
     _FakeDateTagUsecase? dateTagNotifier,
+    _FakeCalendarBackgroundUsecase? calendarBackgroundNotifier,
   }) {
     final todo = todoNotifier ?? _FakeTodoUsecase(todos: []);
     final dateTag = dateTagNotifier ?? _FakeDateTagUsecase();
+    final calendarBackground =
+        calendarBackgroundNotifier ?? _FakeCalendarBackgroundUsecase();
     return ProviderScope(
       overrides: [
         todoUsecaseProvider.overrideWith(() => todo),
         dateTagUsecaseProvider.overrideWith(() => dateTag),
+        calendarBackgroundUsecaseProvider.overrideWith(
+          () => calendarBackground,
+        ),
       ],
       child: const MaterialApp(home: TodoScreen()),
     );
@@ -140,7 +147,7 @@ Todo _todo() => Todo(
 
 class _FakeTodoUsecase extends TodoUsecase {
   _FakeTodoUsecase({List<Todo> todos = const [], this.throwError = false})
-      : _todos = List.of(todos);
+    : _todos = List.of(todos);
 
   final List<Todo> _todos;
   bool throwError;
@@ -189,3 +196,23 @@ class _FakeDateTagUsecase extends DateTagUsecase {
       const DateTagState(tags: <DateTag>[], taggedDates: []);
 }
 
+class _FakeCalendarBackgroundUsecase extends CalendarBackgroundUsecase {
+  _FakeCalendarBackgroundUsecase();
+
+  String? imagePath;
+
+  @override
+  Future<String?> build() async => imagePath;
+
+  @override
+  Future<void> clearCalendarBackground() async {
+    imagePath = null;
+    state = const AsyncData<String?>(null);
+  }
+
+  @override
+  Future<void> setCalendarBackground(String imagePath) async {
+    this.imagePath = imagePath;
+    state = AsyncData(imagePath);
+  }
+}

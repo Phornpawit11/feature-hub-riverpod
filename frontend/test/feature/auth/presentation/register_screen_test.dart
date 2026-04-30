@@ -42,13 +42,30 @@ void main() {
       expect(fakeNotifier.lastCheckedEmail, 'test@example.com');
     });
 
-    testWidgets('step 1 advances to step 2 when email is available', (
+    testWidgets('step 1 shows auth exception from email availability check', (
       tester,
     ) async {
       final fakeNotifier = _FakeAuthUsecase(
         AuthState.unauthenticated,
-        checkEmailAvailabilityResult: true,
+        checkEmailError: const AuthException(
+          'Unable to verify email right now.',
+        ),
       );
+
+      await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
+
+      await tester.enterText(find.byType(TextField).first, 'test@example.com');
+      await tester.tap(_continueButton());
+      await tester.pump();
+
+      expect(find.text('Unable to verify email right now.'), findsOneWidget);
+      expect(find.text('Step 1 of 2'), findsOneWidget);
+    });
+
+    testWidgets('step 1 advances to step 2 when email is available', (
+      tester,
+    ) async {
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
 
@@ -63,10 +80,7 @@ void main() {
     testWidgets('step 2 validates empty fields and password mismatch', (
       tester,
     ) async {
-      final fakeNotifier = _FakeAuthUsecase(
-        AuthState.unauthenticated,
-        checkEmailAvailabilityResult: true,
-      );
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
 
@@ -93,14 +107,14 @@ void main() {
     });
 
     testWidgets('step 2 submits trimmed registration values', (tester) async {
-      final fakeNotifier = _FakeAuthUsecase(
-        AuthState.unauthenticated,
-        checkEmailAvailabilityResult: true,
-      );
+      final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
       await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
 
-      await tester.enterText(find.byType(TextField).first, ' test@example.com ');
+      await tester.enterText(
+        find.byType(TextField).first,
+        ' test@example.com ',
+      );
       await tester.tap(_continueButton());
       await tester.pump();
 
@@ -116,54 +130,66 @@ void main() {
       expect(fakeNotifier.registerCallCount, 1);
     });
 
-    testWidgets('back returns to step 1 and changing email clears detail data', (
-      tester,
-    ) async {
-      final fakeNotifier = _FakeAuthUsecase(
-        AuthState.unauthenticated,
-        checkEmailAvailabilityResult: true,
-      );
+    testWidgets(
+      'back returns to step 1 and changing email clears detail data',
+      (tester) async {
+        final fakeNotifier = _FakeAuthUsecase(AuthState.unauthenticated);
 
-      await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
+        await tester.pumpWidget(_buildTestApp(fakeNotifier: fakeNotifier));
 
-      await tester.enterText(find.byType(TextField).first, 'first@example.com');
-      await tester.tap(_continueButton());
-      await tester.pump();
+        await tester.enterText(
+          find.byType(TextField).first,
+          'first@example.com',
+        );
+        await tester.tap(_continueButton());
+        await tester.pump();
 
-      await tester.enterText(find.byType(TextField).at(0), 'Test User');
-      await tester.enterText(find.byType(TextField).at(1), 'password123');
-      await tester.enterText(find.byType(TextField).at(2), 'password123');
+        await tester.enterText(find.byType(TextField).at(0), 'Test User');
+        await tester.enterText(find.byType(TextField).at(1), 'password123');
+        await tester.enterText(find.byType(TextField).at(2), 'password123');
 
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Back'));
-      await tester.pump();
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Back'));
+        await tester.pump();
 
-      expect(find.text('Step 1 of 2'), findsOneWidget);
+        expect(find.text('Step 1 of 2'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField).first, 'second@example.com');
-      await tester.tap(_continueButton());
-      await tester.pump();
+        await tester.enterText(
+          find.byType(TextField).first,
+          'second@example.com',
+        );
+        await tester.tap(_continueButton());
+        await tester.pump();
 
-      expect(find.text('Step 2 of 2'), findsOneWidget);
-      expect(
-        tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text,
-        isEmpty,
-      );
-      expect(
-        tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
-        isEmpty,
-      );
-      expect(
-        tester.widget<TextField>(find.byType(TextField).at(2)).controller!.text,
-        isEmpty,
-      );
-    });
+        expect(find.text('Step 2 of 2'), findsOneWidget);
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).at(0))
+              .controller!
+              .text,
+          isEmpty,
+        );
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).at(1))
+              .controller!
+              .text,
+          isEmpty,
+        );
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).at(2))
+              .controller!
+              .text,
+          isEmpty,
+        );
+      },
+    );
 
     testWidgets('duplicate email from register returns to step 1', (
       tester,
     ) async {
       final fakeNotifier = _FakeAuthUsecase(
         AuthState.unauthenticated,
-        checkEmailAvailabilityResult: true,
         registerFailureMessage:
             'An account with this email already exists. Please sign in.',
       );

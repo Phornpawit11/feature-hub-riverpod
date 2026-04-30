@@ -8,12 +8,14 @@ import 'package:todos_riverpod/src/core/theme/app_theme.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/auth_loading.screen.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
+import 'package:todos_riverpod/src/feature/todos/widget/calendar_widget_sync_service.dart';
 import 'package:todos_riverpod/src/router/app_router.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(calendarWidgetStartupSyncProvider);
     final preferences = ref.watch(appPreferencesProvider);
     final authState = ref.watch(authUsecaseProvider);
     return Sizer(

@@ -32,11 +32,23 @@
 				<string>com.googleusercontent.apps.881081053034-c8tsmpovtsu5l0jq31hnnoa37t2u6dgo</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.dodo.todoapps.widget</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>featurehub</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow access to your photo library to choose a calendar background.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
