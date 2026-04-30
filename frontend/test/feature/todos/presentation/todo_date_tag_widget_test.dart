@@ -518,7 +518,7 @@ void main() {
     testWidgets('remove focuses the previous tagged date in the same month', (
       WidgetTester tester,
     ) async {
-      final today = normalizeDate(DateTime.now());
+      final today = normalizeDate(DateTime(2026, 5, 15));
       final previousTaggedDate = normalizeDate(
         today.subtract(const Duration(days: 2)),
       );
@@ -561,7 +561,12 @@ void main() {
             todoRepositoryProvider.overrideWithValue(todoRepository),
             dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
           ],
-          child: const MaterialApp(home: TodoScreen()),
+          child: MaterialApp(
+            home: TodoScreen(
+              initialFocusedMonth: today,
+              initialSelectedDate: today,
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -581,7 +586,7 @@ void main() {
     testWidgets('remove falls back to next tagged date in the same month', (
       WidgetTester tester,
     ) async {
-      final today = normalizeDate(DateTime.now());
+      final today = normalizeDate(DateTime(2026, 5, 15));
       final nextTaggedDate = normalizeDate(today.add(const Duration(days: 2)));
       final todoRepository = _FakeTodoRepository(
         todos: [
@@ -622,7 +627,12 @@ void main() {
             todoRepositoryProvider.overrideWithValue(todoRepository),
             dateTagRepositoryProvider.overrideWithValue(dateTagRepository),
           ],
-          child: const MaterialApp(home: TodoScreen()),
+          child: MaterialApp(
+            home: TodoScreen(
+              initialFocusedMonth: today,
+              initialSelectedDate: today,
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
