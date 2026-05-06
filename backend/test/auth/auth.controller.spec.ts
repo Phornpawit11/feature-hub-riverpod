@@ -14,11 +14,15 @@ import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto'
 import { GoogleLoginDto } from '../../src/modules/auth/dto/google-login.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
+import { VerifyEmailOtpDto } from '../../src/modules/auth/dto/verify-email-otp.dto';
+import { ResendEmailOtpDto } from '../../src/modules/auth/dto/resend-email-otp.dto';
 
 describe('AuthController', () => {
   const authService = {
     checkEmailAvailability: jest.fn(),
     register: jest.fn(),
+    verifyEmailOtp: jest.fn(),
+    resendEmailOtp: jest.fn(),
     updateProfile: jest.fn(),
     login: jest.fn(),
     loginWithGoogle: jest.fn(),
@@ -57,6 +61,23 @@ describe('AuthController', () => {
       password: 'password123',
     };
     const response = {
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: 60,
+    };
+
+    authService.register.mockResolvedValue(response as never);
+
+    await expect(controller.register(registerDto)).resolves.toEqual(response);
+    expect(authService.register).toHaveBeenCalledWith(registerDto);
+  });
+
+  it('delegates verify email otp to auth service', async () => {
+    const verifyEmailOtpDto: VerifyEmailOtpDto = {
+      verificationId: 'verification-1',
+      otp: '123456',
+    };
+    const response = {
       accessToken: 'jwt-token',
       refreshToken: 'refresh-token',
       user: {
@@ -68,10 +89,30 @@ describe('AuthController', () => {
       },
     };
 
-    authService.register.mockResolvedValue(response as never);
+    authService.verifyEmailOtp.mockResolvedValue(response as never);
 
-    await expect(controller.register(registerDto)).resolves.toEqual(response);
-    expect(authService.register).toHaveBeenCalledWith(registerDto);
+    await expect(controller.verifyEmailOtp(verifyEmailOtpDto)).resolves.toEqual(
+      response,
+    );
+    expect(authService.verifyEmailOtp).toHaveBeenCalledWith(verifyEmailOtpDto);
+  });
+
+  it('delegates resend email otp to auth service', async () => {
+    const resendEmailOtpDto: ResendEmailOtpDto = {
+      verificationId: 'verification-1',
+    };
+    const response = {
+      verificationId: 'verification-2',
+      email: 'test@example.com',
+      resendAvailableInSeconds: 60,
+    };
+
+    authService.resendEmailOtp.mockResolvedValue(response as never);
+
+    await expect(controller.resendEmailOtp(resendEmailOtpDto)).resolves.toEqual(
+      response,
+    );
+    expect(authService.resendEmailOtp).toHaveBeenCalledWith(resendEmailOtpDto);
   });
 
   it('delegates profile update to auth service', async () => {

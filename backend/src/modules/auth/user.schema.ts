@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { AuthProvider } from './auth-user.types';
+import { AuthProvider, EmailVerificationStatus } from './auth-user.types';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -20,6 +20,30 @@ export class User {
 
   @Prop({ required: true, enum: ['password', 'google'] })
   provider: AuthProvider;
+
+  @Prop({ required: true, enum: ['pending', 'verified'] })
+  verificationStatus: EmailVerificationStatus;
+
+  @Prop()
+  emailVerifiedAt?: Date;
+
+  @Prop()
+  emailOtpHash?: string;
+
+  @Prop()
+  emailOtpExpiresAt?: Date;
+
+  @Prop()
+  emailOtpResendAvailableAt?: Date;
+
+  @Prop({ default: 0 })
+  emailOtpAttemptCount?: number;
+
+  @Prop({ default: 0 })
+  emailOtpRequestCount?: number;
+
+  @Prop({ unique: true, sparse: true })
+  emailVerificationId?: string;
 
   @Prop({ unique: true, sparse: true })
   googleSub?: string;

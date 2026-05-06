@@ -16,6 +16,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthUserResponse } from './auth-user.types';
 
@@ -31,6 +33,16 @@ export class AuthController {
   @Post('register')
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  @Post('verify-email-otp')
+  verifyEmailOtp(@Body() verifyEmailOtpDto: VerifyEmailOtpDto) {
+    return this.authService.verifyEmailOtp(verifyEmailOtpDto);
+  }
+
+  @Post('resend-email-otp')
+  resendEmailOtp(@Body() resendEmailOtpDto: ResendEmailOtpDto) {
+    return this.authService.resendEmailOtp(resendEmailOtpDto);
   }
 
   @Post('login')

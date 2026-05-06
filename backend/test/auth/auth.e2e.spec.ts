@@ -20,6 +20,7 @@ import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
 import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
 import { RefreshTokenDto } from '../../src/modules/auth/dto/refresh-token.dto';
 import { LogoutDto } from '../../src/modules/auth/dto/logout.dto';
+import { EmailVerificationSender } from '../../src/modules/auth/email-verification.sender';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -43,6 +44,9 @@ describe('AuthController (e2e)', () => {
 
   const configService = {
     get: jest.fn(),
+  };
+  const emailVerificationSender = {
+    sendOtp: jest.fn(),
   };
 
   let controller: AuthController;
@@ -76,6 +80,10 @@ describe('AuthController (e2e)', () => {
           provide: ConfigService,
           useValue: configService,
         },
+        {
+          provide: EmailVerificationSender,
+          useValue: emailVerificationSender,
+        },
       ],
     }).compile();
 
@@ -96,6 +104,7 @@ describe('AuthController (e2e)', () => {
         displayName: 'Test User',
         avatarUrl: null,
         provider: 'password',
+        verificationStatus: 'verified',
         refreshSessionId: 'session-1',
         save: jest.fn(),
       })),
@@ -185,7 +194,7 @@ describe('AuthController (e2e)', () => {
     expect(response).toEqual({ available: false });
   });
 
-  it('returns access and refresh tokens for valid registration', async () => {
+  it('returns pending verification info for valid registration', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockResolvedValue(null as never),
     });
@@ -196,18 +205,14 @@ describe('AuthController (e2e)', () => {
       passwordHash: 'hashed-password',
       avatarUrl: null,
       provider: 'password',
+      verificationStatus: 'pending',
+      emailVerificationId: 'verification-1',
+      emailOtpResendAvailableAt: new Date(Date.now() + 60_000),
       save: jest.fn(),
     } as never);
     mockedBcrypt.hash
       .mockResolvedValueOnce('hashed-password' as never)
-      .mockResolvedValueOnce('hashed-refresh-token' as never);
-    jwtService.signAsync
-      .mockResolvedValueOnce('jwt-token' as never)
-      .mockResolvedValueOnce('refresh-token' as never);
-    jwtService.verifyAsync.mockResolvedValue({
-      sid: 'session-1',
-      exp: 2_000_000_000,
-    } as never);
+      .mockResolvedValueOnce('hashed-otp' as never);
 
     const registerDto = (await validationPipe.transform(
       {
@@ -224,19 +229,14 @@ describe('AuthController (e2e)', () => {
     const response = await controller.register(registerDto);
 
     expect(response).toEqual({
-      accessToken: 'jwt-token',
-      refreshToken: 'refresh-token',
-      user: {
-        id: 'user-1',
-        email: 'test@example.com',
-        displayName: 'Test User',
-        avatarUrl: null,
-        provider: 'password',
-      },
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: expect.any(Number),
     });
     expect(userModel.findOne).toHaveBeenCalledWith({
       email: 'test@example.com',
     });
+    expect(emailVerificationSender.sendOtp).toHaveBeenCalled();
   });
 
   it('updates profile displayName for authenticated user', async () => {
@@ -285,6 +285,7 @@ describe('AuthController (e2e)', () => {
         passwordHash: 'hashed-password',
         displayName: 'Test User',
         provider: 'password',
+        verificationStatus: 'verified',
         save: jest.fn(),
       })),
     });
@@ -305,6 +306,37 @@ describe('AuthController (e2e)', () => {
       status: 401,
       response: {
         message: 'Invalid email or password',
+      },
+    });
+  });
+
+  it('returns 401 for pending account login', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockImplementation(async () => ({
+        id: 'user-1',
+        email: 'test@example.com',
+        passwordHash: 'hashed-password',
+        displayName: 'Test User',
+        provider: 'password',
+        verificationStatus: 'pending',
+      })),
+    });
+
+    const loginDto = (await validationPipe.transform(
+      {
+        email: 'test@example.com',
+        password: 'password123',
+      },
+      {
+        type: 'body',
+        metatype: LoginDto,
+      },
+    )) as LoginDto;
+
+    await expect(controller.login(loginDto)).rejects.toMatchObject({
+      status: 401,
+      response: {
+        message: 'Please verify your email before signing in.',
       },
     });
   });

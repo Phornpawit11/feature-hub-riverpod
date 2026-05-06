@@ -25,9 +25,20 @@ class AuthUsecase extends _$AuthUsecase {
 
     final accessToken = await _storage.readAccessToken();
     final refreshToken = await _storage.readRefreshToken();
+    final pendingVerification = await _storage.readPendingVerification();
 
     if ((accessToken == null || accessToken.isEmpty) &&
         (refreshToken == null || refreshToken.isEmpty)) {
+      if (pendingVerification != null) {
+        state = AuthState(
+          status: AuthStatus.awaitingEmailVerification,
+          verificationId: pendingVerification.verificationId,
+          pendingEmail: pendingVerification.email,
+          resendAvailableAt: pendingVerification.resendAvailableAt,
+        );
+        return;
+      }
+
       state = AuthState.unauthenticated;
       return;
     }
@@ -105,6 +116,7 @@ class AuthUsecase extends _$AuthUsecase {
         email: email.trim(),
         password: password,
       );
+      await _storage.clearPendingVerification();
       await _storage.writeTokens(
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
@@ -160,16 +172,22 @@ class AuthUsecase extends _$AuthUsecase {
     state = state.clearError(status: AuthStatus.authenticating);
 
     try {
-      final session = await _repository.registerWithEmailPassword(
+      final pendingSession = await _repository.registerWithEmailPassword(
         displayName: displayName.trim(),
         email: email.trim(),
         password: password,
       );
-      await _storage.writeTokens(
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
+      await _storage.writePendingVerification(
+        verificationId: pendingSession.verificationId,
+        email: pendingSession.email,
+        resendAvailableAt: pendingSession.resendAvailableAt,
       );
-      setAuthenticatedSession(session);
+      state = AuthState(
+        status: AuthStatus.awaitingEmailVerification,
+        verificationId: pendingSession.verificationId,
+        pendingEmail: pendingSession.email,
+        resendAvailableAt: pendingSession.resendAvailableAt,
+      );
     } on AuthException catch (error) {
       state = AuthState(
         status: AuthStatus.failure,
@@ -197,6 +215,7 @@ class AuthUsecase extends _$AuthUsecase {
 
     try {
       final session = await _repository.signInWithGoogle();
+      await _storage.clearPendingVerification();
       await _storage.writeTokens(
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
@@ -230,6 +249,7 @@ class AuthUsecase extends _$AuthUsecase {
     }
 
     await _storage.clearTokens();
+    await _storage.clearPendingVerification();
     state = AuthState.unauthenticated;
   }
 
@@ -238,10 +258,12 @@ class AuthUsecase extends _$AuthUsecase {
       return;
     }
 
-    state = state.clearError(
-      status: AuthStatus.unauthenticated,
-      clearUser: true,
-    );
+    if (state.isAwaitingEmailVerification) {
+      state = state.clearError(status: AuthStatus.awaitingEmailVerification);
+      return;
+    }
+
+    state = state.clearError(status: AuthStatus.unauthenticated, clearUser: true);
   }
 
   void setAuthenticatedSession(AuthSession session) {
@@ -250,5 +272,86 @@ class AuthUsecase extends _$AuthUsecase {
 
   void expireSession() {
     state = AuthState.unauthenticated;
+  }
+
+  Future<void> verifyEmailOtp({required String otp}) async {
+    final verificationId = state.verificationId;
+    if (verificationId == null || verificationId.isEmpty) {
+      state = const AuthState(
+        status: AuthStatus.failure,
+        errorMessage: 'Your verification session has ended. Please sign up again.',
+      );
+      return;
+    }
+
+    state = state.clearError(status: AuthStatus.authenticating);
+
+    try {
+      final session = await _repository.verifyEmailOtp(
+        verificationId: verificationId,
+        otp: otp.trim(),
+      );
+      await _storage.clearPendingVerification();
+      await _storage.writeTokens(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
+      setAuthenticatedSession(session);
+    } on AuthException catch (error) {
+      state = state.clearError(
+        status: AuthStatus.awaitingEmailVerification,
+      ).copyWith(errorMessage: error.message);
+    } catch (_) {
+      state = state.clearError(
+        status: AuthStatus.awaitingEmailVerification,
+      ).copyWith(errorMessage: 'Something went wrong. Please try again.');
+    }
+  }
+
+  Future<void> resendEmailOtp() async {
+    final verificationId = state.verificationId;
+    if (verificationId == null || verificationId.isEmpty) {
+      state = const AuthState(
+        status: AuthStatus.failure,
+        errorMessage: 'Your verification session has ended. Please sign up again.',
+      );
+      return;
+    }
+
+    state = state.clearError(status: AuthStatus.awaitingEmailVerification);
+
+    try {
+      final pendingSession = await _repository.resendEmailOtp(
+        verificationId: verificationId,
+      );
+      await _storage.writePendingVerification(
+        verificationId: pendingSession.verificationId,
+        email: pendingSession.email,
+        resendAvailableAt: pendingSession.resendAvailableAt,
+      );
+      state = AuthState(
+        status: AuthStatus.awaitingEmailVerification,
+        verificationId: pendingSession.verificationId,
+        pendingEmail: pendingSession.email,
+        resendAvailableAt: pendingSession.resendAvailableAt,
+      );
+    } on AuthException catch (error) {
+      state = state.clearError(
+        status: AuthStatus.awaitingEmailVerification,
+      ).copyWith(errorMessage: error.message);
+    } catch (_) {
+      state = state.clearError(
+        status: AuthStatus.awaitingEmailVerification,
+      ).copyWith(errorMessage: 'Something went wrong. Please try again.');
+    }
+  }
+
+  Future<void> abandonPendingVerification() async {
+    await _storage.clearPendingVerification();
+    state = state.clearError(
+      status: AuthStatus.unauthenticated,
+      clearPendingVerification: true,
+      clearUser: true,
+    );
   }
 }

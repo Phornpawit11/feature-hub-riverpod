@@ -1,4 +1,5 @@
 export type AuthProvider = 'password' | 'google';
+export type EmailVerificationStatus = 'pending' | 'verified';
 
 export interface AuthUserResponse {
   id: string;
@@ -12,6 +13,12 @@ export interface AuthSuccessResponse {
   accessToken: string;
   refreshToken: string;
   user: AuthUserResponse;
+}
+
+export interface RegisterPendingResponse {
+  verificationId: string;
+  email: string;
+  resendAvailableInSeconds: number;
 }
 
 export interface LogoutResponse {

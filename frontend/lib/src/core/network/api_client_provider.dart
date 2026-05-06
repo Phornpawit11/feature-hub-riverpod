@@ -211,7 +211,11 @@ bool _shouldRefresh(DioException error) {
 
 bool _isRefreshManagedPath(String path) {
   return path.endsWith('/auth/login') ||
+      path.endsWith('/auth/register') ||
+      path.endsWith('/auth/check-email') ||
       path.endsWith('/auth/google') ||
+      path.endsWith('/auth/verify-email-otp') ||
+      path.endsWith('/auth/resend-email-otp') ||
       path.endsWith('/auth/refresh') ||
       path.endsWith('/auth/logout');
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/login.screen.dart';
 import 'package:todos_riverpod/src/feature/auth/presentation/register.screen.dart';
+import 'package:todos_riverpod/src/feature/auth/presentation/verify_email_otp.screen.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
@@ -14,6 +15,7 @@ part 'app_router.g.dart';
 enum SGRoute {
   login,
   register,
+  verifyEmailOtp,
   landing,
   todo;
 
@@ -56,6 +58,13 @@ GoRouter goRouter(Ref ref) {
         },
       ),
       GoRoute(
+        path: SGRoute.verifyEmailOtp.route,
+        name: SGRoute.verifyEmailOtp.name,
+        builder: (BuildContext context, GoRouterState state) {
+          return const VerifyEmailOtpScreen();
+        },
+      ),
+      GoRoute(
         path: SGRoute.landing.route,
         name: SGRoute.landing.name,
         builder: (BuildContext context, GoRouterState state) {
@@ -79,13 +88,26 @@ GoRouter goRouter(Ref ref) {
       final location = state.matchedLocation;
       final isLoginRoute = location == SGRoute.login.route;
       final isRegisterRoute = location == SGRoute.register.route;
+      final isVerifyRoute = location == SGRoute.verifyEmailOtp.route;
       final isTodoRoute = location == SGRoute.todo.route;
+      final isLandingRoute = location == SGRoute.landing.route;
 
+      if (auth.isAwaitingEmailVerification &&
+          !isRegisterRoute &&
+          !isVerifyRoute) {
+        return SGRoute.verifyEmailOtp.route;
+      }
+      if (!auth.isAwaitingEmailVerification && isVerifyRoute) {
+        return SGRoute.register.route;
+      }
       if (!auth.isAuthenticated && isTodoRoute) {
         return SGRoute.login.route;
       }
-
-      if (auth.isAuthenticated && (isLoginRoute || isRegisterRoute)) {
+      if (!auth.isAuthenticated && isLandingRoute) {
+        return SGRoute.login.route;
+      }
+      if (auth.isAuthenticated &&
+          (isLoginRoute || isRegisterRoute || isVerifyRoute)) {
         return SGRoute.landing.route;
       }
 
