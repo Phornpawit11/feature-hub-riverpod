@@ -1,26 +1,33 @@
 # Todos Riverpod
 
-A monorepo for a small productivity app built around Flutter on the frontend, NestJS on the backend, and a shared OpenAPI contract.
+A monorepo for a productivity app built with Flutter on the frontend, NestJS on the backend, and a shared OpenAPI contract.
 
-The project started as a local-first Todo app and now includes a first-pass authentication flow with email/password login, mobile Google sign-in, and session restore on app launch.
+The app started as a local-first Todo workspace and now includes authenticated routing, email signup with OTP verification, Google sign-in on mobile, session restore, and a shared API spec for auth and todo flows.
 
-## Features
+## What Is In This Repo
 
-- Login screen with email/password authentication
-- Google sign-in for mobile builds
-- Protected Todo route with auth-aware redirects
-- Todo workspace UI built with Riverpod and go_router
-- Local frontend preferences and storage helpers
-- NestJS backend with MongoDB, JWT auth, and Google token verification
-- Shared API contract under `shared/api-contracts`
+- `frontend/` Flutter app built with Riverpod and `go_router`
+- `backend/` NestJS REST API with MongoDB and JWT auth
+- `shared/` shared API contract in OpenAPI format
+
+## Current Features
+
+- Email/password sign in
+- Email signup with OTP verification
+- OTP resend flow with cooldown
+- Mobile Google sign in
+- Session restore on app launch
+- Protected app routes based on auth state
+- Todo workspace UI with local storage-backed data flow
+- Shared API contract for auth and todo endpoints
 
 ## Monorepo Structure
 
 ```text
 .
-├── frontend/   Flutter app
-├── backend/    NestJS REST API
-└── shared/     Shared contracts and specs
+├── frontend/
+├── backend/
+└── shared/
 ```
 
 ### Frontend Structure
@@ -31,6 +38,7 @@ frontend/lib/
   my_app.dart
   src/
     core/
+      config/
       network/
       settings/
       storage/
@@ -54,21 +62,18 @@ frontend/lib/
 
 ### Architecture Notes
 
-This project follows a feature-first layered structure:
+This project uses a feature-first layered structure:
 
-- `presentation` renders UI and collects user input
-- `usecase` coordinates actions and state changes
-- `domain` contains entities and contracts
-- `data` implements repositories and talks to remote or local datasources
-- `core` contains shared app infrastructure such as theme, API client, storage, and reusable widgets
+- `presentation` renders UI and handles user interaction
+- `usecase` coordinates state and app actions
+- `domain` defines entities and repository contracts
+- `data` implements repositories and datasources
+- `core` contains shared infrastructure such as env config, storage, network, and reusable widgets
 
-For the auth feature, the flow is:
+Current app flow examples:
 
-`presentation -> usecase -> domain abstraction -> data implementation -> remote datasource / secure storage`
-
-For the Todo feature, the current flow is:
-
-`presentation -> usecase -> domain abstraction -> data implementation -> local datasource`
+- Auth: `presentation -> usecase -> domain contract -> data repository -> remote datasource / secure storage`
+- Todos: `presentation -> usecase -> domain contract -> data repository -> local datasource`
 
 ## Tech Stack
 
@@ -76,60 +81,78 @@ For the Todo feature, the current flow is:
 
 - Flutter
 - Riverpod + `riverpod_annotation`
-- go_router
+- `go_router`
 - Dio
-- flutter_secure_storage
-- google_sign_in
+- `flutter_secure_storage`
+- `google_sign_in`
 - Hive CE
-- Flex Color Scheme
 - Flutter Hooks / Hooks Riverpod
+- Freezed + JSON Serializable
 
 ### Backend
 
 - NestJS
-- Mongoose + MongoDB
+- MongoDB + Mongoose
 - JWT + Passport
 - bcrypt
 - Google Auth Library
-- class-validator / class-transformer
+- `class-validator` / `class-transformer`
 
 ## Current Screens
 
-- `LoginScreen`: email/password login and mobile Google sign-in
-- `LandingScreen`: feature hub
-- `TodoScreen`: authenticated Todo workspace
+- `LoginScreen`
+- `RegisterScreen`
+- `VerifyEmailOtpScreen`
+- `LandingScreen`
+- `TodoScreen`
 
-## Authentication Flow
+## Authentication Overview
 
-Currently implemented:
+Implemented auth endpoints:
 
+- `POST /api/auth/check-email`
+- `POST /api/auth/register`
+- `POST /api/auth/verify-email-otp`
+- `POST /api/auth/resend-email-otp`
 - `POST /api/auth/login`
 - `POST /api/auth/google`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `PATCH /api/auth/profile`
 
-Session behavior:
+### Email Signup Flow
 
-- app startup restores a stored token
-- valid token redirects to `/todo`
-- unauthenticated users are redirected to `/login`
-- authenticated users are redirected away from `/login`
+1. User enters email and account details.
+2. Backend creates or refreshes a pending account.
+3. Backend sends a 6-digit OTP.
+4. Frontend routes the user to OTP verification.
+5. Tokens are issued only after OTP verification succeeds.
 
-Current scope:
+### OTP Behavior
 
-- login only
-- no sign up yet
-- no forgot password yet
-- no refresh token yet
-- no logout API yet
+- OTP length: 6 digits
+- OTP expiry: 5 minutes
+- Resend cooldown: 60 seconds
+- Pending verification state is stored locally so the app can resume the flow after restart
+
+### Development Email Sender
+
+There is no production email provider wired into the repo yet.
+
+In development and test, OTP delivery uses a mock sender that logs the code from:
+
+- [backend/src/modules/auth/email-verification.sender.ts](/Users/overwhelmed/Desktop/WORK/todos_riverpod/backend/src/modules/auth/email-verification.sender.ts)
+
+In production, the current sender only warns that no provider is configured.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Flutter SDK installed
-- Dart SDK compatible with the Flutter version in use
+- Flutter SDK
 - Node.js and npm
-- MongoDB, either local, Docker, or Atlas
+- MongoDB, local or hosted
 
 ## Backend Setup
 
@@ -140,12 +163,18 @@ cd backend
 npm install
 ```
 
-Create `backend/.env` from `backend/.env.example` and set:
+Create `backend/.env` from `backend/.env.example`.
+
+Example values:
 
 ```env
-MONGODB_URI=your_mongodb_uri
+NODE_ENV=development
+MONGODB_URI=mongodb://127.0.0.1:27017/todos
 PORT=3000
-JWT_SECRET=your_local_dev_secret
+JWT_ACCESS_SECRET=your_local_dev_access_secret
+JWT_REFRESH_SECRET=your_local_dev_refresh_secret
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=30d
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 ```
 
@@ -156,9 +185,11 @@ cd backend
 npm run start:dev
 ```
 
-### Seed A Password User For Login Testing
+The API runs at `http://localhost:3000/api`.
 
-If you want a test user for the email/password flow:
+### Seed A Password User
+
+If you want a test user for email/password login:
 
 ```bash
 cd backend
@@ -180,11 +211,9 @@ SEED_USER_DISPLAY_NAME='Demo User' \
 npm run seed:password-user
 ```
 
-The seed script reads `MONGODB_URI` from the current shell, then falls back to `backend/.env`, then falls back to `mongodb://127.0.0.1:27017/todos`.
-
 ## MongoDB With Docker
 
-If you want a quick local MongoDB instance:
+Quick local MongoDB:
 
 ```bash
 docker run -d --name todos-mongo -p 27017:27017 mongo:7
@@ -199,7 +228,7 @@ docker start todos-mongo
 docker logs todos-mongo
 ```
 
-To persist MongoDB data across container recreation:
+Persistent volume version:
 
 ```bash
 docker run -d --name todos-mongo -p 27017:27017 -v todos-mongo-data:/data/db mongo:7
@@ -214,14 +243,9 @@ cd frontend
 flutter pub get
 ```
 
-Create `frontend/.env` from `frontend/.env.example`, then run the app:
+Create `frontend/.env` from `frontend/.env.example`.
 
-```bash
-cd frontend
-flutter run
-```
-
-Frontend runtime env:
+Example values:
 
 ```env
 API_BASE_URL=http://localhost:3000/api
@@ -229,39 +253,44 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_SERVER_CLIENT_ID=your_google_server_client_id
 ```
 
+Run the app:
+
+```bash
+cd frontend
+flutter run
+```
+
 Notes:
 
-- Android emulator defaults to `http://10.0.2.2:3000/api`
-- other platforms default to `http://localhost:3000/api`
-- Google sign-in is currently enabled only for mobile builds
+- If `API_BASE_URL` is omitted, Android emulator defaults to `http://10.0.2.2:3000/api`
+- Other platforms default to `http://localhost:3000/api`
+- Google sign-in is currently enabled only for mobile builds in this app configuration
 
 ## Shared API Contract
 
-The shared auth and todo contract lives here:
+The API spec lives here:
 
-```text
-shared/api-contracts/todos.yaml
-```
+- [shared/api-contracts/todos.yaml](/Users/overwhelmed/Desktop/WORK/todos_riverpod/shared/api-contracts/todos.yaml)
 
-This spec documents:
+It documents:
 
-- auth login
-- Google login
-- current user lookup
+- auth request and response shapes
+- OTP verification endpoints
 - todo endpoints
+- shared schema definitions used by frontend and backend as a common contract
 
 ## Code Generation
 
 The frontend uses generated files for Riverpod, Freezed, JSON serialization, and Hive.
 
-Run code generation with:
+Run code generation:
 
 ```bash
 cd frontend
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-For continuous generation during development:
+Watch mode:
 
 ```bash
 cd frontend
@@ -279,7 +308,7 @@ cd backend
 npm run build
 ```
 
-Run auth-focused tests:
+Auth-focused tests:
 
 ```bash
 cd backend
@@ -302,20 +331,27 @@ cd frontend
 dart analyze
 ```
 
-Run tests:
+Run all tests:
 
 ```bash
 cd frontend
 flutter test
 ```
 
+Run auth-focused tests:
+
+```bash
+cd frontend
+flutter test test/feature/auth
+```
+
 ## Development Notes
 
 - Do not manually edit generated files ending in `.g.dart` or `.freezed.dart`
-- Keep navigation centralized in `frontend/lib/src/router`
+- Keep routing centralized in `frontend/lib/src/router`
 - Keep business logic out of widgets
-- Reuse shared theme and widgets before adding one-off styling
-- Auth route protection currently lives in the app router
+- Prefer reusing shared theme, storage, and widgets before adding one-off infrastructure
+- The shared OpenAPI file should be updated when request or response contracts change
 
 ## Version
 

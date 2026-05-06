@@ -52,8 +52,8 @@ if (!email || !email.includes('@')) {
   process.exit(1);
 }
 
-if (!password || password.length < 6) {
-  console.error('SEED_USER_PASSWORD must be at least 6 characters');
+if (!password || password.length < 8) {
+  console.error('SEED_USER_PASSWORD must be at least 8 characters');
   process.exit(1);
 }
 
@@ -64,7 +64,22 @@ const userSchema = new mongoose.Schema(
     displayName: { type: String, required: true, trim: true },
     avatarUrl: { type: String },
     provider: { type: String, enum: ['password', 'google'], required: true },
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'verified'],
+      required: true,
+    },
+    emailVerifiedAt: { type: Date },
+    emailOtpHash: { type: String },
+    emailOtpExpiresAt: { type: Date },
+    emailOtpResendAvailableAt: { type: Date },
+    emailOtpAttemptCount: { type: Number, default: 0 },
+    emailOtpRequestCount: { type: Number, default: 0 },
+    emailVerificationId: { type: String, sparse: true, unique: true },
     googleSub: { type: String, sparse: true, unique: true },
+    refreshTokenHash: { type: String },
+    refreshTokenExpiresAt: { type: Date },
+    refreshSessionId: { type: String },
   },
   {
     timestamps: true,
@@ -79,6 +94,7 @@ async function seedPasswordUser() {
   await mongoose.connect(MONGODB_URI);
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const now = new Date();
   const user = await User.findOneAndUpdate(
     { email },
     {
@@ -88,6 +104,22 @@ async function seedPasswordUser() {
         displayName,
         avatarUrl,
         provider: 'password',
+        verificationStatus: 'verified',
+        emailVerifiedAt: now,
+      },
+      $unset: {
+        emailOtpHash: 1,
+        emailOtpExpiresAt: 1,
+        emailOtpResendAvailableAt: 1,
+        emailVerificationId: 1,
+        googleSub: 1,
+        refreshTokenHash: 1,
+        refreshTokenExpiresAt: 1,
+        refreshSessionId: 1,
+      },
+      $setOnInsert: {
+        emailOtpAttemptCount: 0,
+        emailOtpRequestCount: 0,
       },
     },
     {
@@ -101,6 +133,7 @@ async function seedPasswordUser() {
   console.log(`email: ${user.email}`);
   console.log(`displayName: ${user.displayName}`);
   console.log(`provider: ${user.provider}`);
+  console.log(`verificationStatus: ${user.verificationStatus}`);
 }
 
 seedPasswordUser()
