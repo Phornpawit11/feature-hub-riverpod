@@ -11,26 +11,110 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Authentication success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSuccessResponse'
-        '400':
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "400":
           description: Invalid payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
-        '401':
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "401":
           description: Invalid credentials
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
+                $ref: "#/components/schemas/AuthErrorResponse"
+  /api/auth/register:
+    post:
+      summary: Register with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Registration accepted and waiting for OTP verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterPendingResponse"
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+  /api/auth/verify-email-otp:
+    post:
+      summary: Verify email with OTP and create session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailOtpRequest"
+      responses:
+        "200":
+          description: Authentication success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "400":
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "401":
+          description: Incorrect code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+  /api/auth/resend-email-otp:
+    post:
+      summary: Resend email OTP for pending registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendEmailOtpRequest"
+      responses:
+        "200":
+          description: Pending verification updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterPendingResponse"
+        "400":
+          description: Verification no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "429":
+          description: Resend limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/auth/google:
     post:
       summary: Login with Google ID token
@@ -39,44 +123,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GoogleLoginRequest'
+              $ref: "#/components/schemas/GoogleLoginRequest"
       responses:
-        '200':
+        "200":
           description: Authentication success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSuccessResponse'
-        '400':
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "400":
           description: Invalid payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
-        '401':
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "401":
           description: Invalid token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/auth/me:
     get:
       summary: Get current authenticated user
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Current authenticated user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthUser'
-        '401':
+                $ref: "#/components/schemas/AuthUser"
+        "401":
           description: Invalid or missing token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/auth/refresh:
     post:
       summary: Refresh auth session
@@ -85,20 +169,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
+              $ref: "#/components/schemas/RefreshTokenRequest"
       responses:
-        '200':
+        "200":
           description: Authentication success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSuccessResponse'
-        '401':
+                $ref: "#/components/schemas/AuthSuccessResponse"
+        "401":
           description: Invalid or expired refresh token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/auth/logout:
     post:
       summary: Logout current refresh session
@@ -107,25 +191,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LogoutRequest'
+              $ref: "#/components/schemas/LogoutRequest"
       responses:
-        '200':
+        "200":
           description: Logout success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LogoutResponse'
-        '401':
+                $ref: "#/components/schemas/LogoutResponse"
+        "401":
           description: Invalid or expired refresh token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthErrorResponse'
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/todos:
     get:
       summary: Get all todos
       responses:
-        '200':
+        "200":
           description: List of todos
     post:
       summary: Create a todo
@@ -134,9 +218,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTodo'
+              $ref: "#/components/schemas/CreateTodo"
       responses:
-        '201':
+        "201":
           description: Created
   /api/todos/{id}:
     get:
@@ -148,7 +232,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: A todo
     put:
       summary: Update a todo
@@ -163,9 +247,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTodo'
+              $ref: "#/components/schemas/UpdateTodo"
       responses:
-        '200':
+        "200":
           description: Updated
     delete:
       summary: Delete a todo
@@ -176,7 +260,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Deleted
 components:
   securitySchemes:
@@ -220,6 +304,41 @@ components:
         password:
           type: string
           minLength: 1
+    RegisterRequest:
+      type: object
+      required:
+        - displayName
+        - email
+        - password
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    VerifyEmailOtpRequest:
+      type: object
+      required:
+        - verificationId
+        - otp
+      properties:
+        verificationId:
+          type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+    ResendEmailOtpRequest:
+      type: object
+      required:
+        - verificationId
+      properties:
+        verificationId:
+          type: string
     GoogleLoginRequest:
       type: object
       required:
@@ -256,7 +375,22 @@ components:
         refreshToken:
           type: string
         user:
-          $ref: '#/components/schemas/AuthUser'
+          $ref: "#/components/schemas/AuthUser"
+    RegisterPendingResponse:
+      type: object
+      required:
+        - verificationId
+        - email
+        - resendAvailableInSeconds
+      properties:
+        verificationId:
+          type: string
+        email:
+          type: string
+          format: email
+        resendAvailableInSeconds:
+          type: integer
+          minimum: 0
     LogoutResponse:
       type: object
       required:

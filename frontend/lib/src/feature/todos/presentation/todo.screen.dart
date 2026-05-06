@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:todos_riverpod/src/core/widgets/app_drawer.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/date_tag.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_state.dart';
+import 'package:todos_riverpod/src/feature/todos/usecase/calendar_background_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/usecase/date_tag_usecase.dart';
 import 'package:todos_riverpod/src/feature/todos/domain/todo.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/widgets/add_date_tag_sheet.dart';
@@ -17,15 +19,25 @@ import 'package:todos_riverpod/src/feature/todos/usecase/todo.usecase.dart';
 enum _TodoViewMode { calendar, list }
 
 class TodoScreen extends HookConsumerWidget {
-  const TodoScreen({super.key});
+  const TodoScreen({
+    super.key,
+    this.initialFocusedMonth,
+    this.initialSelectedDate,
+  });
 
   static const double _screenSwipeVelocityThreshold = 280;
+  final DateTime? initialFocusedMonth;
+  final DateTime? initialSelectedDate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final todoListAsync = ref.watch(todoUsecaseProvider);
     final dateTagAsync = ref.watch(dateTagUsecaseProvider);
+    final calendarBackgroundAsync = ref.watch(calendarBackgroundUsecaseProvider);
+    final isCalendarBackgroundPickerSupported = ref.watch(
+      isMobileCalendarBackgroundPickerSupportedProvider,
+    );
     final textEditingController = useTextEditingController();
     final selectedPriority = useState(TodoPriority.medium);
     final selectedDueDate = useState<DateTime?>(null);
@@ -34,8 +46,13 @@ class TodoScreen extends HookConsumerWidget {
     final isSubmittingTodo = useState(false);
     final viewMode = useState(_TodoViewMode.calendar);
     final now = DateTime.now();
-    final focusedMonth = useState<DateTime>(DateTime(now.year, now.month));
-    final selectedCalendarDate = useState<DateTime>(dateOnly(now));
+    final initialSelectedCalendarDate = dateOnly(initialSelectedDate ?? now);
+    final initialCalendarMonth = DateTime(
+      (initialFocusedMonth ?? initialSelectedCalendarDate).year,
+      (initialFocusedMonth ?? initialSelectedCalendarDate).month,
+    );
+    final focusedMonth = useState<DateTime>(initialCalendarMonth);
+    final selectedCalendarDate = useState<DateTime>(initialSelectedCalendarDate);
 
     void resetComposer() {
       textEditingController.clear();
@@ -81,6 +98,42 @@ class TodoScreen extends HookConsumerWidget {
         context: context,
         builder: (dialogContext) => EditTodoDialog(todo: todo),
       );
+    }
+
+    Future<void> pickCalendarBackgroundImage() async {
+      if (!isCalendarBackgroundPickerSupported) {
+        if (!context.mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gallery background is available on mobile only.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 92,
+      );
+
+      if (image == null) {
+        return;
+      }
+
+      await ref
+          .read(calendarBackgroundUsecaseProvider.notifier)
+          .setCalendarBackground(image.path);
+    }
+
+    Future<void> clearCalendarBackgroundImage() async {
+      await ref
+          .read(calendarBackgroundUsecaseProvider.notifier)
+          .clearCalendarBackground();
     }
 
     void changeFocusedMonth(DateTime month) {
@@ -323,6 +376,14 @@ class TodoScreen extends HookConsumerWidget {
                                       .toggleTodo(todoId);
                                 },
                                 onDelete: deleteTodo,
+                                backgroundImagePath:
+                                    calendarBackgroundAsync.asData?.value,
+                                onPickBackgroundImage:
+                                    pickCalendarBackgroundImage,
+                                onClearBackgroundImage:
+                                    clearCalendarBackgroundImage,
+                                isBackgroundImagePickerSupported:
+                                    isCalendarBackgroundPickerSupported,
                               ),
                       );
                     },

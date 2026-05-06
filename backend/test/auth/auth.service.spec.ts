@@ -18,6 +18,7 @@ import { CheckEmailDto } from '../../src/modules/auth/dto/check-email.dto';
 import { LoginDto } from '../../src/modules/auth/dto/login.dto';
 import { RegisterDto } from '../../src/modules/auth/dto/register.dto';
 import { UpdateProfileDto } from '../../src/modules/auth/dto/update-profile.dto';
+import { EmailVerificationSender } from '../../src/modules/auth/email-verification.sender';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -42,6 +43,9 @@ describe('AuthService', () => {
   const configService = {
     get: jest.fn(),
   } as unknown as Pick<ConfigService, 'get'>;
+  const emailVerificationSender = {
+    sendOtp: jest.fn(),
+  } as unknown as jest.Mocked<EmailVerificationSender>;
 
   let service: AuthService;
 
@@ -60,6 +64,7 @@ describe('AuthService', () => {
       userModel as never,
       jwtService as JwtService,
       configService as ConfigService,
+      emailVerificationSender as EmailVerificationSender,
     );
   });
 
@@ -96,7 +101,7 @@ describe('AuthService', () => {
     });
   });
 
-  it('registers a password user and returns an authenticated session', async () => {
+  it('registers a password user and returns pending verification info', async () => {
     const registerDto: RegisterDto = {
       displayName: ' Test User ',
       email: ' Test@Example.com ',
@@ -108,7 +113,10 @@ describe('AuthService', () => {
       displayName: 'Test User',
       avatarUrl: null,
       provider: 'password',
+      verificationStatus: 'pending',
       passwordHash: 'hashed-password',
+      emailVerificationId: 'verification-1',
+      emailOtpResendAvailableAt: new Date(Date.now() + 60_000),
       save: jest.fn(),
     };
 
@@ -118,26 +126,12 @@ describe('AuthService', () => {
     userModel.create.mockResolvedValue(user as never);
     mockedBcrypt.hash
       .mockResolvedValueOnce('hashed-password' as never)
-      .mockResolvedValueOnce('hashed-refresh-token' as never);
-    jwtService.signAsync = jest
-      .fn<() => Promise<string>>()
-      .mockResolvedValueOnce('jwt-token' as never)
-      .mockResolvedValueOnce('refresh-token' as never);
-    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({
-      sid: 'session-1',
-      exp: 2_000_000_000,
-    } as never);
+      .mockResolvedValueOnce('hashed-otp' as never);
 
     await expect(service.register(registerDto)).resolves.toEqual({
-      accessToken: 'jwt-token',
-      refreshToken: 'refresh-token',
-      user: {
-        id: 'user-1',
-        email: 'test@example.com',
-        displayName: 'Test User',
-        avatarUrl: null,
-        provider: 'password',
-      },
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: expect.any(Number),
     });
 
     expect(userModel.findOne).toHaveBeenCalledWith({
@@ -149,8 +143,15 @@ describe('AuthService', () => {
       displayName: 'Test User',
       passwordHash: 'hashed-password',
       provider: 'password',
+      verificationStatus: 'pending',
+      emailOtpHash: 'hashed-otp',
+      emailOtpExpiresAt: expect.any(Date),
+      emailOtpResendAvailableAt: expect.any(Date),
+      emailOtpAttemptCount: 0,
+      emailOtpRequestCount: 1,
+      emailVerificationId: expect.any(String),
     });
-    expect(user.save).toHaveBeenCalled();
+    expect(emailVerificationSender.sendOtp).toHaveBeenCalled();
   });
 
   it('updates displayName and returns updated auth user', async () => {
@@ -194,6 +195,7 @@ describe('AuthService', () => {
       exec: jest.fn().mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
+        verificationStatus: 'verified',
       } as never),
     });
 
@@ -222,6 +224,7 @@ describe('AuthService', () => {
       displayName: 'Test User',
       avatarUrl: null,
       provider: 'password',
+      verificationStatus: 'verified',
       save: jest.fn(),
     };
 
@@ -262,6 +265,28 @@ describe('AuthService', () => {
     expect(user.save).toHaveBeenCalled();
   });
 
+  it('rejects login when email is pending verification', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        passwordHash: 'hashed-password',
+        displayName: 'Test User',
+        provider: 'password',
+        verificationStatus: 'pending',
+      } as never),
+    });
+
+    await expect(
+      service.login({
+        email: 'test@example.com',
+        password: 'password123',
+      }),
+    ).rejects.toThrow(
+      new UnauthorizedException('Please verify your email before signing in.'),
+    );
+  });
+
   it('throws unauthorized when email is not found', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockImplementation(async () => null),
@@ -285,6 +310,7 @@ describe('AuthService', () => {
         passwordHash: 'hashed-password',
         displayName: 'Test User',
         provider: 'password',
+        verificationStatus: 'verified',
         save: jest.fn(),
       })),
     });

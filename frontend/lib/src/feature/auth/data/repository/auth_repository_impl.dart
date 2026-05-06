@@ -60,7 +60,7 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   }
 
   @override
-  Future<AuthSession> registerWithEmailPassword({
+  Future<RegisterPendingSession> registerWithEmailPassword({
     required String displayName,
     required String email,
     required String password,
@@ -81,6 +81,24 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
       email: email,
       password: password,
     );
+  }
+
+  @override
+  Future<AuthSession> verifyEmailOtp({
+    required String verificationId,
+    required String otp,
+  }) {
+    return _remoteDatasource.verifyEmailOtp(
+      verificationId: verificationId,
+      otp: otp,
+    );
+  }
+
+  @override
+  Future<RegisterPendingSession> resendEmailOtp({
+    required String verificationId,
+  }) {
+    return _remoteDatasource.resendEmailOtp(verificationId: verificationId);
   }
 
   @override

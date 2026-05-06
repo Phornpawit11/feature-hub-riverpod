@@ -7,10 +7,13 @@ import 'package:todos_riverpod/src/feature/auth/data/model/check_email_request.d
 import 'package:todos_riverpod/src/feature/auth/data/model/check_email_response.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/google_login_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/login_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/register_pending_response.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/resend_email_otp_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/logout_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/register_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/refresh_token_request.dart';
 import 'package:todos_riverpod/src/feature/auth/data/model/update_profile_request.dart';
+import 'package:todos_riverpod/src/feature/auth/data/model/verify_email_otp_request.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_repository.dart';
 import 'package:todos_riverpod/src/feature/auth/domain/auth_user.dart';
 
@@ -61,7 +64,7 @@ class AuthRemoteDatasource {
     }
   }
 
-  Future<AuthSession> registerWithEmailPassword({
+  Future<RegisterPendingSession> registerWithEmailPassword({
     required String displayName,
     required String email,
     required String password,
@@ -77,7 +80,49 @@ class AuthRemoteDatasource {
         data: request.toJson(),
       );
 
+      return _parsePendingSession(response.data);
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<AuthSession> verifyEmailOtp({
+    required String verificationId,
+    required String otp,
+  }) async {
+    try {
+      final request = VerifyEmailOtpRequest(
+        verificationId: verificationId,
+        otp: otp,
+      );
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/verify-email-otp',
+        data: request.toJson(),
+      );
+
       return _parseSession(response.data);
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<RegisterPendingSession> resendEmailOtp({
+    required String verificationId,
+  }) async {
+    try {
+      final request = ResendEmailOtpRequest(verificationId: verificationId);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/resend-email-otp',
+        data: request.toJson(),
+      );
+
+      return _parsePendingSession(response.data);
     } on DioException catch (error) {
       throw AuthException(
         _extractErrorMessage(error),
@@ -185,6 +230,23 @@ class AuthRemoteDatasource {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       user: response.user,
+    );
+  }
+
+  RegisterPendingSession _parsePendingSession(Map<String, dynamic>? data) {
+    if (data == null) {
+      throw const AuthException('Invalid server response.');
+    }
+
+    final response = RegisterPendingResponse.fromJson(data);
+    if (response.verificationId.isEmpty || response.email.isEmpty) {
+      throw const AuthException('Invalid server response.');
+    }
+
+    return RegisterPendingSession(
+      verificationId: response.verificationId,
+      email: response.email,
+      resendAvailableInSeconds: response.resendAvailableInSeconds,
     );
   }
 

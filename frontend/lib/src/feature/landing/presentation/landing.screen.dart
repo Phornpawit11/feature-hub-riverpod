@@ -22,6 +22,11 @@ class LandingScreen extends StatelessWidget {
         title: 'More features soon',
         subtitle: 'This space is ready for new tools as the app grows.',
         icon: Icons.grid_view_rounded,
+      ),
+      const _FeatureItem(
+        title: 'More features soon',
+        subtitle: 'This space is ready for new tools as the app grows.',
+        icon: Icons.grid_view_rounded,
         isEnabled: false,
       ),
     ];

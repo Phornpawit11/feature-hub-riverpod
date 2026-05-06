@@ -8,6 +8,10 @@ import { AuthService } from './auth.service';
 import { User, UserSchema } from './user.schema';
 import { JwtStrategy } from './jwt.strategy';
 import { resolveAuthConfig } from '../../config/auth.config';
+import {
+  EmailVerificationSender,
+  LoggingEmailVerificationSender,
+} from './email-verification.sender';
 
 @Module({
   imports: [
@@ -30,7 +34,14 @@ import { resolveAuthConfig } from '../../config/auth.config';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    {
+      provide: EmailVerificationSender,
+      useClass: LoggingEmailVerificationSender,
+    },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

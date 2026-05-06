@@ -8,6 +8,11 @@ class SecureTokenStorage {
 
   static const String accessTokenKey = 'auth_access_token';
   static const String refreshTokenKey = 'auth_refresh_token';
+  static const String pendingVerificationIdKey = 'auth_pending_verification_id';
+  static const String pendingVerificationEmailKey =
+      'auth_pending_verification_email';
+  static const String pendingResendAvailableAtKey =
+      'auth_pending_resend_available_at';
 
   final FlutterSecureStorage _storage;
 
@@ -46,6 +51,60 @@ class SecureTokenStorage {
   Future<void> clearTokens() async {
     await clearAccessToken();
     await clearRefreshToken();
+  }
+
+  Future<void> writePendingVerification({
+    required String verificationId,
+    required String email,
+    required DateTime resendAvailableAt,
+  }) async {
+    await _storage.write(
+      key: pendingVerificationIdKey,
+      value: verificationId,
+    );
+    await _storage.write(key: pendingVerificationEmailKey, value: email);
+    await _storage.write(
+      key: pendingResendAvailableAtKey,
+      value: resendAvailableAt.toIso8601String(),
+    );
+  }
+
+  Future<({
+    String verificationId,
+    String email,
+    DateTime resendAvailableAt,
+  })?> readPendingVerification() async {
+    final verificationId = await _storage.read(key: pendingVerificationIdKey);
+    final email = await _storage.read(key: pendingVerificationEmailKey);
+    final resendAvailableAtRaw = await _storage.read(
+      key: pendingResendAvailableAtKey,
+    );
+
+    if (verificationId == null ||
+        verificationId.isEmpty ||
+        email == null ||
+        email.isEmpty ||
+        resendAvailableAtRaw == null ||
+        resendAvailableAtRaw.isEmpty) {
+      return null;
+    }
+
+    final resendAvailableAt = DateTime.tryParse(resendAvailableAtRaw);
+    if (resendAvailableAt == null) {
+      return null;
+    }
+
+    return (
+      verificationId: verificationId,
+      email: email,
+      resendAvailableAt: resendAvailableAt,
+    );
+  }
+
+  Future<void> clearPendingVerification() async {
+    await _storage.delete(key: pendingVerificationIdKey);
+    await _storage.delete(key: pendingVerificationEmailKey);
+    await _storage.delete(key: pendingResendAvailableAtKey);
   }
 }
 

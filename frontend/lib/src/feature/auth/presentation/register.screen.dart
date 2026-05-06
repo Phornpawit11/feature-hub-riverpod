@@ -80,6 +80,12 @@ class RegisterScreen extends HookConsumerWidget {
         return;
       }
 
+      if (next.status == AuthStatus.awaitingEmailVerification) {
+        didSubmitRegister.value = false;
+        context.go(SGRoute.verifyEmailOtp.route);
+        return;
+      }
+
       if (next.status == AuthStatus.failure) {
         final message =
             next.errorMessage ?? 'Something went wrong. Please try again.';

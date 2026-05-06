@@ -213,12 +213,12 @@ void main() {
     );
 
     test(
-      'registerWithEmailPassword stores tokens and authenticates on success',
+      'registerWithEmailPassword stores pending verification state on success',
       () async {
-        fakeRepository.registerSession = AuthSession(
-          accessToken: 'register-token',
-          refreshToken: 'register-refresh-token',
-          user: _testUser(),
+        fakeRepository.registerPendingSession = const RegisterPendingSession(
+          verificationId: 'verification-1',
+          email: 'test@example.com',
+          resendAvailableInSeconds: 60,
         );
 
         final notifier = container.read(authUsecaseProvider.notifier);
@@ -234,9 +234,13 @@ void main() {
         expect(fakeRepository.lastDisplayName, 'Test User');
         expect(fakeRepository.lastEmail, 'test@example.com');
         expect(fakeRepository.lastPassword, 'password123');
-        expect(fakeStorage.storedAccessToken, 'register-token');
-        expect(fakeStorage.storedRefreshToken, 'register-refresh-token');
-        expect(state.status, AuthStatus.authenticated);
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+        expect(fakeStorage.pendingVerificationId, 'verification-1');
+        expect(fakeStorage.pendingVerificationEmail, 'test@example.com');
+        expect(state.status, AuthStatus.awaitingEmailVerification);
+        expect(state.verificationId, 'verification-1');
+        expect(state.pendingEmail, 'test@example.com');
       },
     );
 
@@ -378,7 +382,7 @@ class _FakeAuthRepository implements AuthRepository {
   AuthException? checkEmailAvailabilityError;
   AuthUser? updateProfileResult;
   AuthException? updateProfileError;
-  AuthSession? registerSession;
+  RegisterPendingSession? registerPendingSession;
   AuthException? registerError;
   AuthSession? emailSession;
   AuthException? emailError;
@@ -386,6 +390,10 @@ class _FakeAuthRepository implements AuthRepository {
   AuthException? googleError;
   AuthSession? refreshSessionResult;
   AuthException? refreshError;
+  AuthSession? verifyOtpSession;
+  AuthException? verifyOtpError;
+  RegisterPendingSession? resendPendingSession;
+  AuthException? resendOtpError;
   AuthUser? currentUser;
   AuthException? currentUserError;
   final Map<String, AuthUser> userByToken = {};
@@ -446,7 +454,7 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthSession> registerWithEmailPassword({
+  Future<RegisterPendingSession> registerWithEmailPassword({
     required String displayName,
     required String email,
     required String password,
@@ -459,11 +467,11 @@ class _FakeAuthRepository implements AuthRepository {
       throw registerError!;
     }
 
-    return registerSession ??
-        AuthSession(
-          accessToken: 'register-token',
-          refreshToken: 'register-refresh-token',
-          user: _testUser(),
+    return registerPendingSession ??
+        const RegisterPendingSession(
+          verificationId: 'verification-1',
+          email: 'test@example.com',
+          resendAvailableInSeconds: 60,
         );
   }
 
@@ -511,6 +519,39 @@ class _FakeAuthRepository implements AuthRepository {
           user: _testUser(),
         );
   }
+
+  @override
+  Future<RegisterPendingSession> resendEmailOtp({
+    required String verificationId,
+  }) async {
+    if (resendOtpError != null) {
+      throw resendOtpError!;
+    }
+
+    return resendPendingSession ??
+        RegisterPendingSession(
+          verificationId: verificationId,
+          email: lastEmail ?? 'test@example.com',
+          resendAvailableInSeconds: 60,
+        );
+  }
+
+  @override
+  Future<AuthSession> verifyEmailOtp({
+    required String verificationId,
+    required String otp,
+  }) async {
+    if (verifyOtpError != null) {
+      throw verifyOtpError!;
+    }
+
+    return verifyOtpSession ??
+        AuthSession(
+          accessToken: 'verified-token',
+          refreshToken: 'verified-refresh-token',
+          user: _testUser(),
+        );
+  }
 }
 
 class _FakeSecureTokenStorage extends SecureTokenStorage {
@@ -518,6 +559,9 @@ class _FakeSecureTokenStorage extends SecureTokenStorage {
 
   String? storedAccessToken;
   String? storedRefreshToken;
+  String? pendingVerificationId;
+  String? pendingVerificationEmail;
+  DateTime? pendingResendAvailableAt;
   int clearTokensCallCount = 0;
 
   @override
@@ -525,6 +569,13 @@ class _FakeSecureTokenStorage extends SecureTokenStorage {
     clearTokensCallCount++;
     storedAccessToken = null;
     storedRefreshToken = null;
+  }
+
+  @override
+  Future<void> clearPendingVerification() async {
+    pendingVerificationId = null;
+    pendingVerificationEmail = null;
+    pendingResendAvailableAt = null;
   }
 
   @override
@@ -538,6 +589,23 @@ class _FakeSecureTokenStorage extends SecureTokenStorage {
   }
 
   @override
+  Future<({String email, DateTime resendAvailableAt, String verificationId})?>
+  readPendingVerification() async {
+    final verificationId = pendingVerificationId;
+    final email = pendingVerificationEmail;
+    final resendAvailableAt = pendingResendAvailableAt;
+    if (verificationId == null || email == null || resendAvailableAt == null) {
+      return null;
+    }
+
+    return (
+      verificationId: verificationId,
+      email: email,
+      resendAvailableAt: resendAvailableAt,
+    );
+  }
+
+  @override
   Future<void> writeAccessToken(String token) async {
     storedAccessToken = token;
   }
@@ -545,5 +613,16 @@ class _FakeSecureTokenStorage extends SecureTokenStorage {
   @override
   Future<void> writeRefreshToken(String token) async {
     storedRefreshToken = token;
+  }
+
+  @override
+  Future<void> writePendingVerification({
+    required String verificationId,
+    required String email,
+    required DateTime resendAvailableAt,
+  }) async {
+    pendingVerificationId = verificationId;
+    pendingVerificationEmail = email;
+    pendingResendAvailableAt = resendAvailableAt;
   }
 }

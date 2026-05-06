@@ -75,7 +75,7 @@ void main() {
     );
 
     test(
-      'registerWithEmailPassword sends register request and parses session',
+      'registerWithEmailPassword sends register request and parses pending verification',
       () async {
         late RequestOptions capturedOptions;
         final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
@@ -87,15 +87,9 @@ void main() {
                   Response<Map<String, dynamic>>(
                     requestOptions: options,
                     data: {
-                      'accessToken': 'jwt-token',
-                      'refreshToken': 'refresh-token',
-                      'user': {
-                        'id': 'user-1',
-                        'email': 'test@example.com',
-                        'displayName': 'Test User',
-                        'provider': 'password',
-                        'avatarUrl': null,
-                      },
+                      'verificationId': 'verification-1',
+                      'email': 'test@example.com',
+                      'resendAvailableInSeconds': 60,
                     },
                   ),
                 );
@@ -105,7 +99,7 @@ void main() {
 
         final datasource = AuthRemoteDatasource(dio);
 
-        final session = await datasource.registerWithEmailPassword(
+        final pendingSession = await datasource.registerWithEmailPassword(
           displayName: 'Test User',
           email: 'test@example.com',
           password: 'password123',
@@ -118,9 +112,9 @@ void main() {
           'email': 'test@example.com',
           'password': 'password123',
         });
-        expect(session.accessToken, 'jwt-token');
-        expect(session.refreshToken, 'refresh-token');
-        expect(session.user.displayName, 'Test User');
+        expect(pendingSession.verificationId, 'verification-1');
+        expect(pendingSession.email, 'test@example.com');
+        expect(pendingSession.resendAvailableInSeconds, 60);
       },
     );
 

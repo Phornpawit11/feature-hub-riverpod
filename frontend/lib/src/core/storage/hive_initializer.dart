@@ -29,5 +29,8 @@ class HiveInitializer {
     if (!Hive.isBoxOpen(HiveBoxes.taggedDates)) {
       await Hive.openBox<TaggedDateHiveModel>(HiveBoxes.taggedDates);
     }
+    if (!Hive.isBoxOpen(HiveBoxes.calendarBackgroundSettings)) {
+      await Hive.openBox<String>(HiveBoxes.calendarBackgroundSettings);
+    }
   }
 }

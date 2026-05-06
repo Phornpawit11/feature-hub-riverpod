@@ -2,6 +2,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import {
   CheckEmailAvailabilityResponse,
@@ -18,6 +19,7 @@ import {
   JwtPayload,
   RefreshJwtPayload,
   LogoutResponse,
+  RegisterPendingResponse,
 } from './auth-user.types';
 import { User, UserDocument } from './user.schema';
 import { CheckEmailDto } from './dto/check-email.dto';
@@ -28,6 +30,18 @@ import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { resolveAuthConfig } from '../../config/auth.config';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
+import { EmailVerificationSender } from './email-verification.sender';
+
+const otpLength = 6;
+const otpExpiresInMinutes = 5;
+const otpExpiresInMs = otpExpiresInMinutes * 60 * 1000;
+const otpResendCooldownSeconds = 60;
+const otpResendCooldownMs = otpResendCooldownSeconds * 1000;
+const maxOtpAttempts = 5;
+const maxOtpRequests = 5;
+const unverifiedLoginMessage = 'Please verify your email before signing in.';
 
 @Injectable()
 export class AuthService {
@@ -38,6 +52,7 @@ export class AuthService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly emailVerificationSender: EmailVerificationSender,
   ) {
     this.authConfig = resolveAuthConfig(configService);
   }
@@ -51,26 +66,169 @@ export class AuthService {
     return { available: !existingUser };
   }
 
-  async register(registerDto: RegisterDto): Promise<AuthSuccessResponse> {
+  async register(registerDto: RegisterDto): Promise<RegisterPendingResponse> {
     const email = this.normalizeEmail(registerDto.email);
     const displayName = registerDto.displayName.trim();
     const existingUser = await this.userModel.findOne({ email }).exec();
 
-    if (existingUser) {
+    if (existingUser?.verificationStatus === 'verified') {
       throw new ConflictException(
         'An account with this email already exists. Please sign in.',
       );
     }
 
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
-    const user = await this.userModel.create({
+    const { otp, otpHash, verificationId, expiresAt, resendAvailableAt } =
+      await this.createOtpState();
+
+    let user = existingUser;
+    if (user) {
+      const requestCount = (user.emailOtpRequestCount ?? 0) + 1;
+      if (requestCount > maxOtpRequests) {
+        throw this.tooManyRequests(
+          'Too many verification codes requested. Please try again later.',
+        );
+      }
+
+      user.displayName = displayName;
+      user.passwordHash = passwordHash;
+      user.provider = 'password';
+      user.verificationStatus = 'pending';
+      user.emailVerifiedAt = undefined;
+      user.emailOtpHash = otpHash;
+      user.emailOtpExpiresAt = expiresAt;
+      user.emailOtpResendAvailableAt = resendAvailableAt;
+      user.emailOtpAttemptCount = 0;
+      user.emailOtpRequestCount = requestCount;
+      user.emailVerificationId = verificationId;
+      await user.save();
+    } else {
+      user = await this.userModel.create({
+        email,
+        displayName,
+        passwordHash,
+        provider: 'password',
+        verificationStatus: 'pending',
+        emailOtpHash: otpHash,
+        emailOtpExpiresAt: expiresAt,
+        emailOtpResendAvailableAt: resendAvailableAt,
+        emailOtpAttemptCount: 0,
+        emailOtpRequestCount: 1,
+        emailVerificationId: verificationId,
+      });
+    }
+
+    await this.emailVerificationSender.sendOtp({
       email,
       displayName,
-      passwordHash,
-      provider: 'password',
+      otp,
+      expiresInMinutes: otpExpiresInMinutes,
     });
 
-    return this.createAuthResponse(user);
+    return this.toRegisterPendingResponse(user);
+  }
+
+  async verifyEmailOtp(
+    verifyEmailOtpDto: VerifyEmailOtpDto,
+  ): Promise<AuthSuccessResponse> {
+    const user = await this.userModel
+      .findOne({ emailVerificationId: verifyEmailOtpDto.verificationId })
+      .exec();
+
+    const pendingUser = this.ensurePendingVerificationUser(user);
+    const attemptCount = pendingUser.emailOtpAttemptCount ?? 0;
+    if (attemptCount >= maxOtpAttempts) {
+      throw this.tooManyRequests(
+        'Too many incorrect codes. Please request a new code.',
+      );
+    }
+
+    if (
+      !pendingUser.emailOtpExpiresAt ||
+      pendingUser.emailOtpExpiresAt.getTime() <= Date.now()
+    ) {
+      throw new BadRequestException(
+        'This verification code has expired. Request a new code to continue.',
+      );
+    }
+
+    if (!pendingUser.emailOtpHash) {
+      throw new BadRequestException(
+        'Verification is unavailable. Please request a new code.',
+      );
+    }
+
+    const otpMatches = await bcrypt.compare(
+      verifyEmailOtpDto.otp,
+      pendingUser.emailOtpHash,
+    );
+
+    if (!otpMatches) {
+      pendingUser.emailOtpAttemptCount = attemptCount + 1;
+      await pendingUser.save();
+
+      if ((pendingUser.emailOtpAttemptCount ?? 0) >= maxOtpAttempts) {
+        throw this.tooManyRequests(
+          'Too many incorrect codes. Please request a new code.',
+        );
+      }
+
+      throw new UnauthorizedException('That code does not look right yet.');
+    }
+
+    this.markEmailVerified(pendingUser);
+    await pendingUser.save();
+    return this.createAuthResponse(pendingUser);
+  }
+
+  async resendEmailOtp(
+    resendEmailOtpDto: ResendEmailOtpDto,
+  ): Promise<RegisterPendingResponse> {
+    const user = await this.userModel
+      .findOne({ emailVerificationId: resendEmailOtpDto.verificationId })
+      .exec();
+
+    const pendingUser = this.ensurePendingVerificationUser(user);
+    const resendAvailableAt = pendingUser.emailOtpResendAvailableAt;
+    if (resendAvailableAt && resendAvailableAt.getTime() > Date.now()) {
+      const waitSeconds = Math.ceil(
+        (resendAvailableAt.getTime() - Date.now()) / 1000,
+      );
+      throw this.tooManyRequests(
+        `Please wait ${waitSeconds} seconds before requesting another code.`,
+      );
+    }
+
+    const requestCount = (pendingUser.emailOtpRequestCount ?? 0) + 1;
+    if (requestCount > maxOtpRequests) {
+      throw this.tooManyRequests(
+        'Too many verification codes requested. Please try again later.',
+      );
+    }
+
+    const { otp, otpHash, verificationId, expiresAt, resendAvailableAt: next } =
+      await this.createOtpState();
+
+    pendingUser.emailOtpHash = otpHash;
+    pendingUser.emailOtpExpiresAt = expiresAt;
+    pendingUser.emailOtpResendAvailableAt = next;
+    pendingUser.emailOtpAttemptCount = 0;
+    pendingUser.emailOtpRequestCount = requestCount;
+    pendingUser.emailVerificationId = verificationId;
+    await pendingUser.save();
+
+    await this.emailVerificationSender.sendOtp({
+      email: pendingUser.email,
+      displayName: pendingUser.displayName,
+      otp,
+      expiresInMinutes: otpExpiresInMinutes,
+    });
+
+    return this.toRegisterPendingResponse(pendingUser);
+  }
+
+  private tooManyRequests(message: string): HttpException {
+    return new HttpException(message, 429);
   }
 
   async updateProfile(
@@ -101,6 +259,10 @@ export class AuthService {
 
     if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.verificationStatus !== 'verified') {
+      throw new UnauthorizedException(unverifiedLoginMessage);
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -152,6 +314,8 @@ export class AuthService {
         displayName: payload.name?.trim() || fallbackDisplayName,
         avatarUrl: payload.picture,
         provider: 'google',
+        verificationStatus: 'verified',
+        emailVerifiedAt: new Date(),
         googleSub: payload.sub,
       });
     } else {
@@ -161,6 +325,7 @@ export class AuthService {
       user.avatarUrl = payload.picture ?? user.avatarUrl;
       user.googleSub = payload.sub;
       user.provider = 'google';
+      this.markEmailVerified(user);
       await user.save();
     }
 
@@ -301,6 +466,74 @@ export class AuthService {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       user: this.toAuthUser(user),
+    };
+  }
+
+  private async createOtpState(): Promise<{
+    otp: string;
+    otpHash: string;
+    verificationId: string;
+    expiresAt: Date;
+    resendAvailableAt: Date;
+  }> {
+    const otp = randomInt(0, 10 ** otpLength)
+      .toString()
+      .padStart(otpLength, '0');
+
+    return {
+      otp,
+      otpHash: await bcrypt.hash(otp, 10),
+      verificationId: randomUUID(),
+      expiresAt: new Date(Date.now() + otpExpiresInMs),
+      resendAvailableAt: new Date(Date.now() + otpResendCooldownMs),
+    };
+  }
+
+  private ensurePendingVerificationUser(
+    user: UserDocument | null,
+  ): UserDocument {
+    if (!user || user.verificationStatus !== 'pending') {
+      throw new BadRequestException(
+        'This verification request is no longer available.',
+      );
+    }
+
+    return user;
+  }
+
+  private markEmailVerified(user: UserDocument) {
+    user.verificationStatus = 'verified';
+    user.emailVerifiedAt = new Date();
+    user.emailOtpHash = undefined;
+    user.emailOtpExpiresAt = undefined;
+    user.emailOtpResendAvailableAt = undefined;
+    user.emailOtpAttemptCount = undefined;
+    user.emailOtpRequestCount = undefined;
+    user.emailVerificationId = undefined;
+  }
+
+  private toRegisterPendingResponse(
+    user: UserDocument,
+  ): RegisterPendingResponse {
+    if (!user.emailVerificationId) {
+      throw new BadRequestException(
+        'Verification is unavailable. Please try signing up again.',
+      );
+    }
+
+    const resendAvailableInSeconds = Math.max(
+      0,
+      Math.ceil(
+        ((user.emailOtpResendAvailableAt?.getTime() ?? Date.now()) -
+          Date.now()) /
+          1000,
+      ),
+    );
+
+    return {
+      verificationId: user.emailVerificationId,
+      email: user.email,
+      resendAvailableInSeconds,
     };
   }
 

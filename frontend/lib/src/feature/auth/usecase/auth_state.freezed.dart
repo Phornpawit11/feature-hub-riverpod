@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AuthState {
 
- AuthStatus get status; AuthUser? get user; String? get errorMessage;
+ AuthStatus get status; AuthUser? get user; String? get verificationId; String? get pendingEmail; DateTime? get resendAvailableAt; String? get errorMessage;
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $AuthStateCopyWith<AuthState> get copyWith => _$AuthStateCopyWithImpl<AuthState>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthState&&(identical(other.status, status) || other.status == status)&&(identical(other.user, user) || other.user == user)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthState&&(identical(other.status, status) || other.status == status)&&(identical(other.user, user) || other.user == user)&&(identical(other.verificationId, verificationId) || other.verificationId == verificationId)&&(identical(other.pendingEmail, pendingEmail) || other.pendingEmail == pendingEmail)&&(identical(other.resendAvailableAt, resendAvailableAt) || other.resendAvailableAt == resendAvailableAt)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,user,errorMessage);
+int get hashCode => Object.hash(runtimeType,status,user,verificationId,pendingEmail,resendAvailableAt,errorMessage);
 
 @override
 String toString() {
-  return 'AuthState(status: $status, user: $user, errorMessage: $errorMessage)';
+  return 'AuthState(status: $status, user: $user, verificationId: $verificationId, pendingEmail: $pendingEmail, resendAvailableAt: $resendAvailableAt, errorMessage: $errorMessage)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $AuthStateCopyWith<$Res>  {
   factory $AuthStateCopyWith(AuthState value, $Res Function(AuthState) _then) = _$AuthStateCopyWithImpl;
 @useResult
 $Res call({
- AuthStatus status, AuthUser? user, String? errorMessage
+ AuthStatus status, AuthUser? user, String? verificationId, String? pendingEmail, DateTime? resendAvailableAt, String? errorMessage
 });
 
 
@@ -62,11 +62,14 @@ class _$AuthStateCopyWithImpl<$Res>
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? user = freezed,Object? errorMessage = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? user = freezed,Object? verificationId = freezed,Object? pendingEmail = freezed,Object? resendAvailableAt = freezed,Object? errorMessage = freezed,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AuthStatus,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as AuthUser?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as AuthUser?,verificationId: freezed == verificationId ? _self.verificationId : verificationId // ignore: cast_nullable_to_non_nullable
+as String?,pendingEmail: freezed == pendingEmail ? _self.pendingEmail : pendingEmail // ignore: cast_nullable_to_non_nullable
+as String?,resendAvailableAt: freezed == resendAvailableAt ? _self.resendAvailableAt : resendAvailableAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -164,10 +167,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AuthStatus status,  AuthUser? user,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AuthStatus status,  AuthUser? user,  String? verificationId,  String? pendingEmail,  DateTime? resendAvailableAt,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthState() when $default != null:
-return $default(_that.status,_that.user,_that.errorMessage);case _:
+return $default(_that.status,_that.user,_that.verificationId,_that.pendingEmail,_that.resendAvailableAt,_that.errorMessage);case _:
   return orElse();
 
 }
@@ -185,10 +188,10 @@ return $default(_that.status,_that.user,_that.errorMessage);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AuthStatus status,  AuthUser? user,  String? errorMessage)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AuthStatus status,  AuthUser? user,  String? verificationId,  String? pendingEmail,  DateTime? resendAvailableAt,  String? errorMessage)  $default,) {final _that = this;
 switch (_that) {
 case _AuthState():
-return $default(_that.status,_that.user,_that.errorMessage);case _:
+return $default(_that.status,_that.user,_that.verificationId,_that.pendingEmail,_that.resendAvailableAt,_that.errorMessage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +208,10 @@ return $default(_that.status,_that.user,_that.errorMessage);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AuthStatus status,  AuthUser? user,  String? errorMessage)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AuthStatus status,  AuthUser? user,  String? verificationId,  String? pendingEmail,  DateTime? resendAvailableAt,  String? errorMessage)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthState() when $default != null:
-return $default(_that.status,_that.user,_that.errorMessage);case _:
+return $default(_that.status,_that.user,_that.verificationId,_that.pendingEmail,_that.resendAvailableAt,_that.errorMessage);case _:
   return null;
 
 }
@@ -220,11 +223,14 @@ return $default(_that.status,_that.user,_that.errorMessage);case _:
 
 
 class _AuthState extends AuthState {
-  const _AuthState({required this.status, this.user, this.errorMessage}): super._();
+  const _AuthState({required this.status, this.user, this.verificationId, this.pendingEmail, this.resendAvailableAt, this.errorMessage}): super._();
   
 
 @override final  AuthStatus status;
 @override final  AuthUser? user;
+@override final  String? verificationId;
+@override final  String? pendingEmail;
+@override final  DateTime? resendAvailableAt;
 @override final  String? errorMessage;
 
 /// Create a copy of AuthState
@@ -237,16 +243,16 @@ _$AuthStateCopyWith<_AuthState> get copyWith => __$AuthStateCopyWithImpl<_AuthSt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthState&&(identical(other.status, status) || other.status == status)&&(identical(other.user, user) || other.user == user)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthState&&(identical(other.status, status) || other.status == status)&&(identical(other.user, user) || other.user == user)&&(identical(other.verificationId, verificationId) || other.verificationId == verificationId)&&(identical(other.pendingEmail, pendingEmail) || other.pendingEmail == pendingEmail)&&(identical(other.resendAvailableAt, resendAvailableAt) || other.resendAvailableAt == resendAvailableAt)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,user,errorMessage);
+int get hashCode => Object.hash(runtimeType,status,user,verificationId,pendingEmail,resendAvailableAt,errorMessage);
 
 @override
 String toString() {
-  return 'AuthState(status: $status, user: $user, errorMessage: $errorMessage)';
+  return 'AuthState(status: $status, user: $user, verificationId: $verificationId, pendingEmail: $pendingEmail, resendAvailableAt: $resendAvailableAt, errorMessage: $errorMessage)';
 }
 
 
@@ -257,7 +263,7 @@ abstract mixin class _$AuthStateCopyWith<$Res> implements $AuthStateCopyWith<$Re
   factory _$AuthStateCopyWith(_AuthState value, $Res Function(_AuthState) _then) = __$AuthStateCopyWithImpl;
 @override @useResult
 $Res call({
- AuthStatus status, AuthUser? user, String? errorMessage
+ AuthStatus status, AuthUser? user, String? verificationId, String? pendingEmail, DateTime? resendAvailableAt, String? errorMessage
 });
 
 
@@ -274,11 +280,14 @@ class __$AuthStateCopyWithImpl<$Res>
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? user = freezed,Object? errorMessage = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? user = freezed,Object? verificationId = freezed,Object? pendingEmail = freezed,Object? resendAvailableAt = freezed,Object? errorMessage = freezed,}) {
   return _then(_AuthState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AuthStatus,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as AuthUser?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as AuthUser?,verificationId: freezed == verificationId ? _self.verificationId : verificationId // ignore: cast_nullable_to_non_nullable
+as String?,pendingEmail: freezed == pendingEmail ? _self.pendingEmail : pendingEmail // ignore: cast_nullable_to_non_nullable
+as String?,resendAvailableAt: freezed == resendAvailableAt ? _self.resendAvailableAt : resendAvailableAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

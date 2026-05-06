@@ -7,6 +7,7 @@ enum AuthStatus {
   restoring,
   unauthenticated,
   authenticating,
+  awaitingEmailVerification,
   authenticated,
   failure,
 }
@@ -16,6 +17,9 @@ abstract class AuthState with _$AuthState {
   const factory AuthState({
     required AuthStatus status,
     AuthUser? user,
+    String? verificationId,
+    String? pendingEmail,
+    DateTime? resendAvailableAt,
     String? errorMessage,
   }) = _AuthState;
 
@@ -25,16 +29,30 @@ abstract class AuthState with _$AuthState {
       status == AuthStatus.restoring || status == AuthStatus.authenticating;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
+  bool get isAwaitingEmailVerification =>
+      status == AuthStatus.awaitingEmailVerification;
 
   AuthState clearError({
     AuthStatus? status,
     AuthUser? user,
+    String? verificationId,
+    String? pendingEmail,
+    DateTime? resendAvailableAt,
     bool clearUser = false,
+    bool clearPendingVerification = false,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: clearUser ? null : (user ?? this.user),
-      errorMessage: null,
+      verificationId: clearPendingVerification
+          ? null
+          : (verificationId ?? this.verificationId),
+      pendingEmail: clearPendingVerification
+          ? null
+          : (pendingEmail ?? this.pendingEmail),
+      resendAvailableAt: clearPendingVerification
+          ? null
+          : (resendAvailableAt ?? this.resendAvailableAt),
     );
   }
 

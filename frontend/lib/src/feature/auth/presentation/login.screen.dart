@@ -295,7 +295,7 @@ class LoginScreen extends HookConsumerWidget {
                                         : () => context.go(
                                             SGRoute.register.route,
                                           ),
-                                    child: Text(
+                                    child: const Text(
                                       "Don't have an account? Sign up",
                                     ),
                                   ),
