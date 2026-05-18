@@ -211,6 +211,7 @@ bool _shouldRefresh(DioException error) {
 
 bool _isRefreshManagedPath(String path) {
   return path.endsWith('/auth/login') ||
+      path.endsWith('/auth/login-pending-verification') ||
       path.endsWith('/auth/register') ||
       path.endsWith('/auth/check-email') ||
       path.endsWith('/auth/google') ||

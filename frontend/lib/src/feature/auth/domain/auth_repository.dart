@@ -23,6 +23,11 @@ abstract class AuthRepository {
     required String verificationId,
   });
 
+  Future<RegisterPendingSession> signInPendingVerification({
+    required String email,
+    required String password,
+  });
+
   Future<AuthSession> signInWithEmailPassword({
     required String email,
     required String password,

@@ -322,6 +322,41 @@ void main() {
     );
 
     test(
+      'signInWithEmailPassword routes valid unverified users into pending verification flow',
+      () async {
+        fakeRepository.emailError = const AuthException(
+          'Please verify your email before signing in.',
+        );
+        fakeRepository.signInPendingVerificationResult =
+            const RegisterPendingSession(
+              verificationId: 'verification-1',
+              email: 'test@example.com',
+              resendAvailableInSeconds: 45,
+            );
+
+        final notifier = container.read(authUsecaseProvider.notifier);
+        await Future<void>.delayed(Duration.zero);
+        await notifier.signInWithEmailPassword(
+          email: ' test@example.com ',
+          password: 'password123',
+        );
+
+        final state = container.read(authUsecaseProvider);
+
+        expect(fakeRepository.lastEmail, 'test@example.com');
+        expect(fakeRepository.lastPassword, 'password123');
+        expect(fakeRepository.lastPendingLoginEmail, 'test@example.com');
+        expect(fakeRepository.lastPendingLoginPassword, 'password123');
+        expect(state.status, AuthStatus.awaitingEmailVerification);
+        expect(state.verificationId, 'verification-1');
+        expect(state.pendingEmail, 'test@example.com');
+        expect(fakeStorage.storedAccessToken, isNull);
+        expect(fakeStorage.storedRefreshToken, isNull);
+        expect(fakeStorage.pendingVerificationId, 'verification-1');
+      },
+    );
+
+    test(
       'signOut calls logout best-effort, clears tokens and unauthenticates',
       () async {
         fakeStorage.storedAccessToken = 'jwt-token';
@@ -386,6 +421,8 @@ class _FakeAuthRepository implements AuthRepository {
   AuthException? registerError;
   AuthSession? emailSession;
   AuthException? emailError;
+  RegisterPendingSession? signInPendingVerificationResult;
+  AuthException? signInPendingVerificationError;
   AuthSession? googleSession;
   AuthException? googleError;
   AuthSession? refreshSessionResult;
@@ -401,6 +438,8 @@ class _FakeAuthRepository implements AuthRepository {
   String? lastCheckedEmail;
   String? lastPassword;
   String? lastDisplayName;
+  String? lastPendingLoginEmail;
+  String? lastPendingLoginPassword;
   String? lastCurrentUserToken;
   String? lastRefreshToken;
   String? lastLogoutRefreshToken;
@@ -503,6 +542,26 @@ class _FakeAuthRepository implements AuthRepository {
           accessToken: 'jwt-token',
           refreshToken: 'refresh-token',
           user: _testUser(),
+        );
+  }
+
+  @override
+  Future<RegisterPendingSession> signInPendingVerification({
+    required String email,
+    required String password,
+  }) async {
+    lastPendingLoginEmail = email;
+    lastPendingLoginPassword = password;
+
+    if (signInPendingVerificationError != null) {
+      throw signInPendingVerificationError!;
+    }
+
+    return signInPendingVerificationResult ??
+        const RegisterPendingSession(
+          verificationId: 'verification-1',
+          email: 'test@example.com',
+          resendAvailableInSeconds: 60,
         );
   }
 

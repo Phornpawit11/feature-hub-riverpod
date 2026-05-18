@@ -277,6 +277,32 @@ export class AuthService {
     return this.createAuthResponse(user);
   }
 
+  async loginPendingVerification(
+    loginDto: LoginDto,
+  ): Promise<RegisterPendingResponse> {
+    const email = this.normalizeEmail(loginDto.email);
+    const user = await this.userModel.findOne({ email }).exec();
+
+    if (!user?.passwordHash || user.provider !== 'password') {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.verificationStatus !== 'pending') {
+      throw new UnauthorizedException(unverifiedLoginMessage);
+    }
+
+    return this.toRegisterPendingResponse(user);
+  }
+
   private normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
   }

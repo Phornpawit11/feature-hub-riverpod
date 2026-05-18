@@ -36,8 +36,9 @@ class VerifyEmailOtpScreen extends HookConsumerWidget {
         ? 0
         : resendAvailableAt.millisecondsSinceEpoch -
               now.value.millisecondsSinceEpoch;
-    final secondsRemaining =
-        millisecondsRemaining <= 0 ? 0 : (millisecondsRemaining / 1000).ceil();
+    final secondsRemaining = millisecondsRemaining <= 0
+        ? 0
+        : (millisecondsRemaining / 1000).ceil();
     final canResend = secondsRemaining == 0 && !isSubmitting;
 
     void clearError() {
@@ -49,7 +50,6 @@ class VerifyEmailOtpScreen extends HookConsumerWidget {
       FocusScope.of(context).unfocus();
       clearError();
       final otp = otpController.text.trim();
-
       if (otp.length != 6) {
         otpError.value = 'Enter the 6-digit code we sent to your email.';
         return;
@@ -108,8 +108,8 @@ class VerifyEmailOtpScreen extends HookConsumerWidget {
                               const SizedBox(height: 8),
                               Text(
                                 pendingEmail == null || pendingEmail.isEmpty
-                                    ? 'Enter the 6-digit code to finish creating your account.'
-                                    : 'We sent a 6-digit code to $pendingEmail. Enter it here to finish creating your account.',
+                                    ? 'Enter the 6-digit code to continue into your account.'
+                                    : 'We sent a 6-digit code to $pendingEmail. Enter it here to continue into your account.',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),

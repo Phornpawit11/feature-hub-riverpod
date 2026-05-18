@@ -25,6 +25,7 @@ describe('AuthController', () => {
     resendEmailOtp: jest.fn(),
     updateProfile: jest.fn(),
     login: jest.fn(),
+    loginPendingVerification: jest.fn(),
     loginWithGoogle: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
@@ -160,6 +161,25 @@ describe('AuthController', () => {
 
     await expect(controller.login(loginDto)).resolves.toEqual(response);
     expect(authService.login).toHaveBeenCalledWith(loginDto);
+  });
+
+  it('delegates pending verification login recovery to auth service', async () => {
+    const loginDto: LoginDto = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
+    const response = {
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: 45,
+    };
+
+    authService.loginPendingVerification.mockResolvedValue(response as never);
+
+    await expect(controller.loginPendingVerification(loginDto)).resolves.toEqual(
+      response,
+    );
+    expect(authService.loginPendingVerification).toHaveBeenCalledWith(loginDto);
   });
 
   it('delegates google login to auth service', async () => {

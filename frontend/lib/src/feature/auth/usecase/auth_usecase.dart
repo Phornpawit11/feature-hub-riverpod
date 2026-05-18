@@ -9,6 +9,8 @@ import 'package:todos_riverpod/src/feature/auth/usecase/auth_state.dart';
 
 part 'auth_usecase.g.dart';
 
+const _unverifiedLoginMessage = 'Please verify your email before signing in.';
+
 @Riverpod(keepAlive: true)
 class AuthUsecase extends _$AuthUsecase {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
@@ -110,10 +112,11 @@ class AuthUsecase extends _$AuthUsecase {
     required String password,
   }) async {
     state = state.clearError(status: AuthStatus.authenticating);
+    final trimmedEmail = email.trim();
 
     try {
       final session = await _repository.signInWithEmailPassword(
-        email: email.trim(),
+        email: trimmedEmail,
         password: password,
       );
       await _storage.clearPendingVerification();
@@ -123,6 +126,39 @@ class AuthUsecase extends _$AuthUsecase {
       );
       setAuthenticatedSession(session);
     } on AuthException catch (error) {
+      if (error.message == _unverifiedLoginMessage) {
+        try {
+          final pendingSession = await _repository.signInPendingVerification(
+            email: trimmedEmail,
+            password: password,
+          );
+          await _storage.writePendingVerification(
+            verificationId: pendingSession.verificationId,
+            email: pendingSession.email,
+            resendAvailableAt: pendingSession.resendAvailableAt,
+          );
+          state = AuthState(
+            status: AuthStatus.awaitingEmailVerification,
+            verificationId: pendingSession.verificationId,
+            pendingEmail: pendingSession.email,
+            resendAvailableAt: pendingSession.resendAvailableAt,
+          );
+          return;
+        } on AuthException catch (pendingError) {
+          state = AuthState(
+            status: AuthStatus.failure,
+            errorMessage: pendingError.message,
+          );
+          return;
+        } catch (_) {
+          state = const AuthState(
+            status: AuthStatus.failure,
+            errorMessage: 'Something went wrong. Please try again.',
+          );
+          return;
+        }
+      }
+
       state = AuthState(
         status: AuthStatus.failure,
         errorMessage: error.message,
