@@ -15,14 +15,15 @@ class LandingScreen extends StatelessWidget {
         icon: Icons.check_circle_outline,
         routeName: SGRoute.todo,
       ),
+      const _FeatureItem(
+        title: 'Weather',
+        subtitle: 'Weather',
+        icon: Icons.check_circle_outline,
+        routeName: SGRoute.weather,
+      ),
     ];
 
     final upcomingFeatures = <_FeatureItem>[
-      const _FeatureItem(
-        title: 'More features soon',
-        subtitle: 'This space is ready for new tools as the app grows.',
-        icon: Icons.grid_view_rounded,
-      ),
       const _FeatureItem(
         title: 'More features soon',
         subtitle: 'This space is ready for new tools as the app grows.',

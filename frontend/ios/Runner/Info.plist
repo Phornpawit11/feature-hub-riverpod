@@ -49,6 +49,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow access to your photo library to choose a calendar background.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow location access so Weather can show your local forecast and fall back gracefully when unavailable.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -9,11 +9,13 @@ class AppEnv {
     required this.apiBaseUrl,
     this.googleClientId,
     this.googleServerClientId,
+    this.openWeatherApiKey,
   });
 
   final String apiBaseUrl;
   final String? googleClientId;
   final String? googleServerClientId;
+  final String? openWeatherApiKey;
 
   factory AppEnv.fromMap(
     Map<String, String> env, {
@@ -28,6 +30,7 @@ class AppEnv {
           _defaultApiBaseUrl(platform: resolvedPlatform, isWeb: isWeb),
       googleClientId: _normalizeValue(env['GOOGLE_CLIENT_ID']),
       googleServerClientId: _normalizeValue(env['GOOGLE_SERVER_CLIENT_ID']),
+      openWeatherApiKey: _normalizeValue(env['OPENWEATHER_API_KEY']),
     );
   }
 

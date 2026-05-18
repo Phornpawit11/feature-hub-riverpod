@@ -34,7 +34,7 @@ final class DateTagRepositoryImplProvider
 }
 
 String _$dateTagRepositoryImplHash() =>
-    r'153e16b7a5ba23b274a534a9e0c8ffc46c7c260f';
+    r'005789a68f48f1169cb06868dd1038e82d455529';
 
 abstract class _$DateTagRepositoryImpl extends $AsyncNotifier<void> {
   FutureOr<void> build();

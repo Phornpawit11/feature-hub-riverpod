@@ -9,11 +9,13 @@ void main() {
         'API_BASE_URL': 'https://api.example.com',
         'GOOGLE_CLIENT_ID': 'client-id',
         'GOOGLE_SERVER_CLIENT_ID': 'server-client-id',
+        'OPENWEATHER_API_KEY': 'weather-key',
       });
 
       expect(env.apiBaseUrl, 'https://api.example.com');
       expect(env.googleClientId, 'client-id');
       expect(env.googleServerClientId, 'server-client-id');
+      expect(env.openWeatherApiKey, 'weather-key');
     });
 
     test('falls back to android emulator base url when env is missing', () {
@@ -40,10 +42,12 @@ void main() {
       final env = AppEnv.fromMap(const {
         'GOOGLE_CLIENT_ID': '   ',
         'GOOGLE_SERVER_CLIENT_ID': '',
+        'OPENWEATHER_API_KEY': '   ',
       });
 
       expect(env.googleClientId, isNull);
       expect(env.googleServerClientId, isNull);
+      expect(env.openWeatherApiKey, isNull);
     });
   });
 }

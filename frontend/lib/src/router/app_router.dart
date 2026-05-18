@@ -9,6 +9,7 @@ import 'package:todos_riverpod/src/feature/auth/usecase/auth_usecase.dart';
 import 'package:todos_riverpod/src/feature/landing/presentation/landing.screen.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo.screen.dart';
 import 'package:todos_riverpod/src/feature/todos/presentation/todo_route_params.dart';
+import 'package:todos_riverpod/src/feature/weather/presentation/weather_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -17,7 +18,8 @@ enum SGRoute {
   register,
   verifyEmailOtp,
   landing,
-  todo;
+  todo,
+  weather;
 
   String get route => '/${toString().replaceAll('SGRoute.', '')}';
   String get name => toString().replaceAll('SGRoute.', '');
@@ -80,6 +82,13 @@ GoRouter goRouter(Ref ref) {
             initialFocusedMonth: routeParams.focusedMonth,
             initialSelectedDate: routeParams.selectedDate,
           );
+        },
+      ),
+      GoRoute(
+        path: SGRoute.weather.route,
+        name: SGRoute.weather.name,
+        builder: (BuildContext context, GoRouterState state) {
+          return const WeatherScreen();
         },
       ),
     ],

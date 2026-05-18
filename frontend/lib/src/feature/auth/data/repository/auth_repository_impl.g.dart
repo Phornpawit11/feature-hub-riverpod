@@ -34,7 +34,7 @@ final class AuthRepositoryImplProvider
 }
 
 String _$authRepositoryImplHash() =>
-    r'45e52f0420a44418afe41b5b0520f313f784692c';
+    r'8a2ad562cca6524e20098947e04b3cab72932b3a';
 
 abstract class _$AuthRepositoryImpl extends $AsyncNotifier<void> {
   FutureOr<void> build();
