@@ -1,9 +1,12 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-final weatherLocationServiceProvider = Provider<WeatherLocationService>((ref) {
+part 'weather_location_service.g.dart';
+
+@riverpod
+WeatherLocationService weatherLocationService(Ref ref) {
   return GeolocatorWeatherLocationService();
-});
+}
 
 class WeatherCoordinates {
   const WeatherCoordinates({

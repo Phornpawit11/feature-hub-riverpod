@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/weather/data/location/weather_location_service.dart';
 import 'package:todos_riverpod/src/feature/weather/data/repository/weather_repository_impl.dart';
 import 'package:todos_riverpod/src/feature/weather/domain/weather_repository.dart';
 import 'package:todos_riverpod/src/feature/weather/usecase/weather_state.dart';
 
-final weatherUsecaseProvider =
-    NotifierProvider<WeatherUsecase, WeatherState>(WeatherUsecase.new);
+part 'weather_usecase.g.dart';
 
-class WeatherUsecase extends Notifier<WeatherState> {
+@Riverpod(keepAlive: true)
+class WeatherUsecase extends _$WeatherUsecase {
   static const WeatherCoordinates _fallbackBangkok = WeatherCoordinates(
     latitude: 13.7563,
     longitude: 100.5018,

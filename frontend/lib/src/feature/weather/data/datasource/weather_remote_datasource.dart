@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/core/config/app_env.dart';
 import 'package:todos_riverpod/src/feature/weather/data/model/current_weather_response.dart';
 import 'package:todos_riverpod/src/feature/weather/data/model/forecast_response.dart';
 import 'package:todos_riverpod/src/feature/weather/domain/weather_repository.dart';
 
-final weatherDioProvider = Provider<Dio>((ref) {
+part 'weather_remote_datasource.g.dart';
+
+@riverpod
+Dio weatherDio(Ref ref) {
   return Dio(
     BaseOptions(
       baseUrl: 'https://api.openweathermap.org/data/2.5',
@@ -15,7 +18,15 @@ final weatherDioProvider = Provider<Dio>((ref) {
       headers: const {'Content-Type': 'application/json'},
     ),
   );
-});
+}
+
+@riverpod
+WeatherRemoteDatasource weatherRemoteDatasource(Ref ref) {
+  return WeatherRemoteDatasource(
+    ref.watch(weatherDioProvider),
+    ref.watch(appEnvProvider),
+  );
+}
 
 class WeatherRemoteDatasource implements WeatherRemoteSource {
   WeatherRemoteDatasource(this._dio, this._appEnv);
@@ -99,7 +110,6 @@ class WeatherRemoteDatasource implements WeatherRemoteSource {
       if (data == null) {
         throw const WeatherException('Invalid weather response from server.');
       }
-
       return ForecastResponse.fromJson(data);
     } on DioException catch (error) {
       throw WeatherException(_extractErrorMessage(error));

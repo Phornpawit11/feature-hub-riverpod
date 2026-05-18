@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:todos_riverpod/src/core/config/app_env.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:todos_riverpod/src/feature/weather/data/datasource/weather_remote_datasource.dart';
 import 'package:todos_riverpod/src/feature/weather/data/model/current_weather_response.dart'
     as current_model;
@@ -10,14 +9,12 @@ import 'package:todos_riverpod/src/feature/weather/data/model/forecast_response.
 import 'package:todos_riverpod/src/feature/weather/domain/weather_models.dart';
 import 'package:todos_riverpod/src/feature/weather/domain/weather_repository.dart';
 
-final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
-  return WeatherRepositoryImpl(
-    WeatherRemoteDatasource(
-      ref.watch(weatherDioProvider),
-      ref.watch(appEnvProvider),
-    ),
-  );
-});
+part 'weather_repository_impl.g.dart';
+
+@riverpod
+WeatherRepository weatherRepository(Ref ref) {
+  return WeatherRepositoryImpl(ref.watch(weatherRemoteDatasourceProvider));
+}
 
 class WeatherRepositoryImpl implements WeatherRepository {
   WeatherRepositoryImpl(this._remoteDatasource);
