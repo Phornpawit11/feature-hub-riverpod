@@ -50,6 +50,11 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('login-pending-verification')
+  loginPendingVerification(@Body() loginDto: LoginDto) {
+    return this.authService.loginPendingVerification(loginDto);
+  }
+
   @Post('google')
   loginWithGoogle(@Body() googleLoginDto: GoogleLoginDto) {
     return this.authService.loginWithGoogle(googleLoginDto);

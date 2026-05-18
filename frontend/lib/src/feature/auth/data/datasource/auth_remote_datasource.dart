@@ -151,6 +151,26 @@ class AuthRemoteDatasource {
     }
   }
 
+  Future<RegisterPendingSession> signInPendingVerification({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final request = LoginRequest(email: email, password: password);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/login-pending-verification',
+        data: request.toJson(),
+      );
+
+      return _parsePendingSession(response.data);
+    } on DioException catch (error) {
+      throw AuthException(
+        _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
   Future<AuthSession> signInWithGoogle({required String idToken}) async {
     try {
       final request = GoogleLoginRequest(idToken: idToken);

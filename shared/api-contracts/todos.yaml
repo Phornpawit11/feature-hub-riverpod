@@ -31,6 +31,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthErrorResponse"
+  /api/auth/login-pending-verification:
+    post:
+      summary: Recover pending email verification after valid password login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Pending verification info for a valid unverified password account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterPendingResponse"
+        "401":
+          description: Invalid credentials or account is not pending verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
   /api/auth/register:
     post:
       summary: Register with email and password

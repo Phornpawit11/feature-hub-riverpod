@@ -148,6 +148,45 @@ describe('AuthController (e2e)', () => {
     });
   });
 
+  it('returns pending verification info for valid pending login recovery', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockImplementation(async () => ({
+        id: 'user-1',
+        email: 'test@example.com',
+        passwordHash: 'hashed-password',
+        displayName: 'Test User',
+        avatarUrl: null,
+        provider: 'password',
+        verificationStatus: 'pending',
+        emailVerificationId: 'verification-1',
+        emailOtpResendAvailableAt: new Date(Date.now() + 45_000),
+      })),
+    });
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+
+    const loginDto = (await validationPipe.transform(
+      {
+        email: 'test@example.com',
+        password: 'password123',
+      },
+      {
+        type: 'body',
+        metatype: LoginDto,
+      },
+    )) as LoginDto;
+
+    const response = await controller.loginPendingVerification(loginDto);
+
+    expect(response).toEqual({
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: expect.any(Number),
+    });
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    });
+  });
+
   it('returns available true when email can be used for registration', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockResolvedValue(null as never),

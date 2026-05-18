@@ -84,6 +84,17 @@ class AuthRepositoryImpl extends _$AuthRepositoryImpl
   }
 
   @override
+  Future<RegisterPendingSession> signInPendingVerification({
+    required String email,
+    required String password,
+  }) {
+    return _remoteDatasource.signInPendingVerification(
+      email: email,
+      password: password,
+    );
+  }
+
+  @override
   Future<AuthSession> verifyEmailOtp({
     required String verificationId,
     required String otp,

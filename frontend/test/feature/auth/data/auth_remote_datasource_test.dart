@@ -168,6 +168,48 @@ void main() {
     );
 
     test(
+      'signInPendingVerification sends recovery request and parses pending session',
+      () async {
+        late RequestOptions capturedOptions;
+        final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000/api'))
+          ..interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                capturedOptions = options;
+                handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    data: {
+                      'verificationId': 'verification-1',
+                      'email': 'test@example.com',
+                      'resendAvailableInSeconds': 45,
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+
+        final datasource = AuthRemoteDatasource(dio);
+
+        final pendingSession = await datasource.signInPendingVerification(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(capturedOptions.path, '/auth/login-pending-verification');
+        expect(capturedOptions.method, 'POST');
+        expect(capturedOptions.data, {
+          'email': 'test@example.com',
+          'password': 'password123',
+        });
+        expect(pendingSession.verificationId, 'verification-1');
+        expect(pendingSession.email, 'test@example.com');
+        expect(pendingSession.resendAvailableInSeconds, 45);
+      },
+    );
+
+    test(
       'signInWithGoogle sends id token request and parses session',
       () async {
         late RequestOptions capturedOptions;

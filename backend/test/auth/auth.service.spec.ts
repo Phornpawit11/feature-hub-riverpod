@@ -287,6 +287,76 @@ describe('AuthService', () => {
     );
   });
 
+  it('returns pending verification info for valid pending login recovery', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      passwordHash: 'hashed-password',
+      displayName: 'Test User',
+      provider: 'password',
+      verificationStatus: 'pending',
+      emailVerificationId: 'verification-1',
+      emailOtpResendAvailableAt: new Date(Date.now() + 45_000),
+    };
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(user as never),
+    });
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+
+    await expect(
+      service.loginPendingVerification({
+        email: ' Test@example.com ',
+        password: 'password123',
+      }),
+    ).resolves.toEqual({
+      verificationId: 'verification-1',
+      email: 'test@example.com',
+      resendAvailableInSeconds: expect.any(Number),
+    });
+  });
+
+  it('rejects pending login recovery for invalid password', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        passwordHash: 'hashed-password',
+        provider: 'password',
+        verificationStatus: 'pending',
+      } as never),
+    });
+    mockedBcrypt.compare.mockResolvedValue(false as never);
+
+    await expect(
+      service.loginPendingVerification({
+        email: 'test@example.com',
+        password: 'wrong-password',
+      }),
+    ).rejects.toThrow(new UnauthorizedException('Invalid email or password'));
+  });
+
+  it('rejects pending login recovery for verified accounts', async () => {
+    userModel.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        passwordHash: 'hashed-password',
+        provider: 'password',
+        verificationStatus: 'verified',
+      } as never),
+    });
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+
+    await expect(
+      service.loginPendingVerification({
+        email: 'test@example.com',
+        password: 'password123',
+      }),
+    ).rejects.toThrow(
+      new UnauthorizedException('Please verify your email before signing in.'),
+    );
+  });
+
   it('throws unauthorized when email is not found', async () => {
     userModel.findOne.mockReturnValue({
       exec: jest.fn().mockImplementation(async () => null),
